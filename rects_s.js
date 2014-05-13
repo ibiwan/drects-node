@@ -1,11 +1,22 @@
-// var express = require('express');
-// app.use(express.json());
+#!/usr/local/bin/node
 
-var fs   = require('fs');
-var url  = require('url');
-var http = require('http');
-var path = require('path');
-var qs = require('querystring');
+var qs         = require('querystring');
+var fs         = require('fs');
+// npm install express body-parser
+var express    = require('express');
+var bodyParser = require('body-parser');
+
+var app = express();
+app.use(bodyParser());
+
+app.get('/favicon.ico', function(req, res){res.end();});
+app.get('/',         mainpage);
+app.get('/getdoc',   getdoc);
+app.post('/savedoc', savedoc);
+
+var port = 1338;
+app.listen(port);
+console.log("listening on ", port);
 
 function mainpage(req, res)
 {
@@ -44,62 +55,22 @@ function getdoc(req, res)
 function savedoc(req, res)
 {
     console.log("savedoc()");
-    var method = req.method;
-    if( method !== 'POST' )
-    {
-        res.writeHead(405, {"Content-Type": "text/plain"});
-        res.write("use POST to save" + "\n");
-        res.end();
-        return;
-    }
 
-    var body = '';
-    req.on('data', function(data){
-        body += data;
-    });
-    req.on('end', function(){
-        var POST = qs.parse(body);
-        // console.log(POST);
-        var filedata = POST.file;
-        filedata = JSON.stringify(JSON.parse(filedata), null, '  ');
-        var filename = "saved.json";
-        fs.writeFile(filename, filedata, {}, function(err){
-            if( err )
-            {
-                console.log("error saving:", err);
-                res.writeHead(500);
-                res.write(JSON.stringify({'success':false, 'error':err}));
-                res.end();
-            } else {
-                res.writeHead(200);
-                res.write(JSON.stringify({'success':true}));
-                res.end();
-            }
-        });
-    });
-}
+    var filedata = req.body.file;
+    filedata = JSON.stringify(JSON.parse(filedata), null, '  ');
 
-function dispatch(req, res)
-{
-    var parts = url.parse(req.url);
-    switch(parts.pathname)
-    {
-        case "/favicon.ico":
+    var filename = "saved.json";
+    fs.writeFile(filename, filedata, {}, function(err){
+        if( err )
+        {
+            console.log("error saving:", err);
+            res.writeHead(500);
+            res.write(JSON.stringify({'success':false, 'error':err}));
             res.end();
-            break;
-        case "/getdoc":
-            getdoc(req, res);
-            break;
-        case "/savedoc":
-            savedoc(req, res);
-            break;
-        default:
-            mainpage(req, res);
-            break;
-    }
+        } else {
+            res.writeHead(200);
+            res.write(JSON.stringify({'success':true}));
+            res.end();
+        }
+    });
 }
-
-http.createServer(function (req, res) {
-    dispatch(req, res);
-}).listen(1337, '127.0.0.1');
-console.log('Server running at http://127.0.0.1:1337/');
