@@ -344,18 +344,19 @@
             console.log(savejson);
             $.ajax("savedoc",
                 {
-                    'type' : 'POST',
-                    'data' : {'file':savejson}
+                    'type'     : 'POST',
+                    'dataType' : 'json',
+                    'data'     : {'file':savejson}
                 })
                 .done(function savedjson(returned_data, stringStatus, jqXHR){
-                    var data = JSON.parse(returned_data);
-                    if( data.success === 'true' )
-                    {
-                        $('#message').text("saved, I think!");
-                        setTimeout(function(){
-                            $('#message').text('');
-                        }, 5000);
-                    }
+                    $('#message').text("saved, I think!");
+                    setTimeout(function(){
+                        $('#message').text('');
+                    }, 5000);
+                })
+                .fail(function nosave(jqXHR, textStatus, errorThrown){
+                    var resp = JSON.parse(jqXHR.responseText);
+                    $('#message').text(resp.error);
                 });
         }
 
@@ -499,12 +500,10 @@
         $(function initialize(){
             $.ajax("getdoc")
                 .done(function gotjson(returned_data, stringStatus, jqXHR){
-                    var data = JSON.parse(returned_data);
+                    getconfig(returned_data);
+
                     var summaryholder = {};
-
-                    getconfig(data);
-
-                    sub = gentree(data, "root", '', summaryholder);
+                    sub = gentree(returned_data, "root", '', summaryholder);
 
                     var htmlroot = $('#root')
                         .attr('class',    'array')

@@ -1,55 +1,31 @@
 #!/usr/local/bin/node
 
-var qs         = require('querystring');
 var fs         = require('fs');
 // npm install express body-parser
 var express    = require('express');
 var bodyParser = require('body-parser');
 
-var app = express();
-app.use(bodyParser());
-
-app.get('/favicon.ico', function(req, res){res.end();});
-app.get('/',         mainpage);
-app.get('/getdoc',   getdoc);
-app.post('/savedoc', savedoc);
-
 var port = 1338;
-app.listen(port);
+var app = express()
+  .get('/',         mainpage)
+  .get('/getdoc',   getdoc)
+  .post('/savedoc', bodyParser(), savedoc)
+  .get('/favicon.ico', function(req, res){
+    res.send(404, 'No favicon');
+  })
+  .listen(port);
 console.log("listening on ", port);
 
 function mainpage(req, res)
 {
     console.log("mainpage()");
-    var filename = 'rects_c.html';
-    fs.readFile(filename, "binary", function(err, file) {
-      if(err) {
-        res.writeHead(500, {"Content-Type": "text/plain"});
-        res.write(err + "\n");
-        res.end();
-        return;
-      }
-      res.writeHead(200);
-      res.write(file, "binary");
-      res.end();
-    });
+    res.sendfile('rects_c.html');
 }
 
 function getdoc(req, res)
 {
     console.log("getdoc()");
-    var filename = 'dnd.json';
-    fs.readFile(filename, "binary", function(err, file) {
-      if(err) {
-        res.writeHead(500, {"Content-Type": "text/plain"});
-        res.write(err + "\n");
-        res.end();
-        return;
-      }
-      res.writeHead(200);
-      res.write(file, "binary");
-      res.end();
-    });
+    res.sendfile("dnd.json");
 }
 
 function savedoc(req, res)
@@ -64,13 +40,9 @@ function savedoc(req, res)
         if( err )
         {
             console.log("error saving:", err);
-            res.writeHead(500);
-            res.write(JSON.stringify({'success':false, 'error':err}));
-            res.end();
+            res.json(500, {'success':false,'error':err});
         } else {
-            res.writeHead(200);
-            res.write(JSON.stringify({'success':true}));
-            res.end();
+            res.json(200, {'success':true});
         }
     });
 }
