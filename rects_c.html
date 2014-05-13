@@ -43,14 +43,14 @@
             'member-open'    : 'fa fa-chevron-down',
             'member-closed'  : 'fa fa-chevron-left'
         };
+
         var configlabels = ['rex-ordering', 'rex-primaries'];
         var config = {};
         function getconfig(tree)
         {
-            var i, key;
             if( tree instanceof Array )
             {
-                for(i = 0; i < tree.length; i++)
+                for( var i = 0; i < tree.length; i++ )
                 {
                     getconfig(tree[i]);
                 }
@@ -58,7 +58,7 @@
             }
             if( tree instanceof Object )
             {
-                for( key in tree )
+                for( var key in tree )
                 {
                     if( $.inArray(key, configlabels) > -1)
                     {
@@ -72,6 +72,15 @@
                 }
             }
         }
+        function saveconfig(tree)
+        {
+            for( var i = 0; i < configlabels.length; i++ )
+            {
+                var label = configlabels[i];
+                tree[label] = config[label];
+            }
+        }
+
         function sortkeys(keys)
         {
             var key;
@@ -108,6 +117,7 @@
             }
             return keys;
         }
+
         function makeid(prefix, current)
         {
             return prefix + '-' + current;
@@ -183,7 +193,8 @@
             return {'stack': primstack, 'valuehtml':valuenode};
         }
 
-        function makearray(data, prefix, primaryvalue){
+        function makearray(data, prefix, primaryvalue)
+        {
             var htmlnode = newdiv('array', makeid(prefix, "array"), '');
 
             var children = [];
@@ -201,8 +212,8 @@
             htmlnode.data('children', children);
             return {'stack':htmlnode, 'valuehtml':htmlnode};
         }
-
-        function makeobject(data, prefix, primaryvalue, summaryholder){
+        function makeobject(data, prefix, primaryvalue, summaryholder)
+        {
             var htmlnode = newdiv('object', makeid(prefix, "object"), '');
 
             var children = {};
@@ -227,7 +238,6 @@
             htmlnode.data('children', children);
             return {'stack':htmlnode, 'valuehtml':htmlnode};
         }
-
         function gentree(data, prefix, primaryvalue, summaryholder)
         {
             var t = typeof(data);
@@ -282,6 +292,30 @@
             }
         }
 
+        function extractarray(htmlnode)
+        {
+            var ret = [];
+            var kids = htmlnode.data('children');
+            for( var i = 0; i < kids.length; i++ )
+            {
+                var kid = kids[i];
+                var element = extractdata(kid);
+                ret.push(element);
+            }
+            return ret;
+        }
+        function extractobject(htmlnode)
+        {
+            var ret = {};
+            var kids = htmlnode.data('children');
+            for( var key in kids )
+            {
+                var kid = kids[key];
+                var member = extractdata(kid);
+                ret[key] = member;
+            }
+            return ret;
+        }
         function extractdata(htmlnode)
         {
             switch(htmlnode.attr('class'))
@@ -290,44 +324,18 @@
                 case 'number':
                 case 'boolean':
                 case 'null':
-                    console.log(htmlnode);
-                    console.log(htmlnode.string());
-                    return htmlnode.string();
+                    return htmlnode.text();
                 case 'array':
-                    return (function extractarray(){
-                        var ret = [];
-                        var kids = htmlnode.data('children');
-                        for( var i = 0; i < kids.length; i++ )
-                        {
-                            console.log(i + ":");
-                            var kid = kids[i];
-                            console.log(kid);
-                            var element = extractdata(kid);
-                            ret.push(element);
-                        }
-                        return ret;
-                    })();
+                    return extractarray(htmlnode);
                case 'object':
-                    return (function printobject(){
-                        var ret = {};
-                        var kids = htmlnode.data('children');
-                        for( var key in kids )
-                        {
-                            console.log(key + ":");
-                            var kid = kids[key];
-                            console.log(kid);
-                            var member = extractdata(kid);
-                            ret[key] = member;
-                        }
-                        return ret;
-                    })();
+                    return extractobject(htmlnode);
             }
         }
 
         function save()
         {
-            var savedata = extractdata($('#root'));
-            console.log(savedata);
+            var savedata = extractdata($('#root'))[0];
+            saveconfig(savedata);
             var savejson = JSON.stringify(savedata);
             console.log(savejson);
         }
@@ -361,10 +369,10 @@
             }
         }
 
-        function isNumber(n) {
+        function isNumber(n)
+        {
           return !isNaN(parseFloat(n)) && isFinite(n);
         }
-
         function validate(type, value)
         {
             console.log("type:", type);
@@ -398,7 +406,6 @@
             alert('unknown field type: ' + type);
             return false;
         }
-
         function handleEdit(eventObject)
         {
             var editbutton   = $(this);
@@ -487,12 +494,12 @@
                     htmlroot.append(sub.stack);
                     sub.stack.data('parent', htmlroot);
 
-                    printdom(htmlroot);
+                    // printdom(htmlroot);
 
                     $('.controller').click(handleToggle);
                     $('.editbutton').click(handleEdit);
 
-                    // save();
+                    save();
                 });
         });
     </script>
