@@ -1,0 +1,499 @@
+<html>
+    <head>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+        <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+        <style>
+            .object2 {
+                display        : flex;
+                flex-direction : row;
+                flex-wrap      : nowrap;
+                overflow-x     : scroll;
+            }
+            .array, .member, .vertical {
+                display        : flex;
+                flex-direction : column;
+                flex-wrap      : nowrap;
+            }
+            .object, .element, .horizontal {
+                display        : flex;
+                flex-direction : row;
+                flex-wrap      : wrap;
+            }
+            .label {
+                font-weight : bold;
+            }
+            * {
+                /*outline : 1px solid #DDD;*/
+                padding : 2px;
+            }
+            .string, .null, .number, .boolean, .member, .element, .summary {
+                outline : 1px solid black;
+            }
+        </style>
+    </head>
+    <body>
+        Click on chevrons to expand/collapse.
+        <div id="root"></div>
+    </body>
+    <script language="javascript">
+        var editicon = 'fa fa-pencil-square-o';
+        var collapsers = {
+            'element-open'   : 'fa fa-chevron-right',
+            'element-closed' : 'fa fa-chevron-up',
+            'member-open'    : 'fa fa-chevron-down',
+            'member-closed'  : 'fa fa-chevron-left'
+        };
+        var configlabels = ['rex-ordering', 'rex-primaries'];
+        var config = {};
+        function getconfig(tree)
+        {
+            var i, key;
+            if( tree instanceof Array )
+            {
+                for(i = 0; i < tree.length; i++)
+                {
+                    getconfig(tree[i]);
+                }
+                return;
+            }
+            if( tree instanceof Object )
+            {
+                for( key in tree )
+                {
+                    if( $.inArray(key, configlabels) > -1)
+                    {
+                        config[key] = tree[key];
+                        delete tree[key];
+                    }
+                    else
+                    {
+                        getconfig(tree[key]);
+                    }
+                }
+            }
+        }
+        function sortkeys(keys)
+        {
+            var key;
+            var sortedkeys = [];
+            var whateverkeys = [];
+            var allkeys = [];
+            for(var i = 0; i < keys.length; i++)
+            {
+                key = keys[i];
+                if( $.inArray(key, config['rex-ordering']) > -1 )
+                {
+                    sortedkeys.push(key);
+                } else {
+                    whateverkeys.push(key);
+                }
+            }
+            for(i = 0; i < config['rex-ordering'].length; i++)
+            {
+                key = config['rex-ordering'][i];
+                if($.inArray(key, sortedkeys) > -1)
+                {
+                    allkeys.push(key);
+                }
+            }
+            allkeys = allkeys.concat(whateverkeys);
+            return allkeys;
+        }
+        function getkeys(obj)
+        {
+            var keys = [];
+            for( var key in obj )
+            {
+                keys.push(key);
+            }
+            return keys;
+        }
+        function makeid(prefix, current)
+        {
+            return prefix + '-' + current;
+        }
+        function newdiv(type, id, value)
+        {
+            return $('<div>' + value + '</div>')
+                .addClass(type)
+                .attr('id', id)
+            ;
+        }
+        function makecontainerstack(type, prefix, index, valwrapper, valuenode, summarystr)
+        {
+            var wrapper    = newdiv(type,    makeid(prefix, type),    '');
+            var labelstack = newdiv('labelstack', makeid(prefix, 'labelstack'), '');
+            var label      = newdiv('label', makeid(prefix, 'label'), index);
+
+            if( type === 'element' )
+            {
+                labelstack.addClass('vertical');
+                collapser = collapsers['element-open'];
+            } else if( type === 'member' ) {
+                labelstack.addClass('horizontal');
+                collapser = collapsers['member-open'];
+            }
+
+            var collapsebutton = newdiv('controller', makeid(prefix, 'collapsebutton'), '<i class="' + collapser + '"></i>');
+
+            labelstack
+                .append(collapsebutton)
+                .append(label)
+            ;
+
+            wrapper
+                .append(labelstack)
+                .append(valwrapper)
+            ;
+
+            collapsebutton
+                .data('type',       type)
+                .data('valuehtml',  valuenode)
+                .data('collapser',  collapsebutton)
+                .data('label',      label)
+                .data('content',    valwrapper)
+            ;
+
+            if( summarystr !== undefined && summarystr !== null && summarystr !== '')
+            {
+                var summary = newdiv('summary', makeid(prefix, 'summary'), summarystr)
+                    .hide();
+                wrapper.append(summary);
+                collapsebutton.data('summaryhtml', summary);
+            }
+            return wrapper;
+        }
+        function makeprimitivestack(type, prefix, data)
+        {
+            var primstack  = newdiv('primstack',  makeid(prefix, 'primstack'),  '');
+            var valuenode  = newdiv(type,         makeid(prefix, type),         data);
+            var editbutton = newdiv('editbutton', makeid(prefix, 'editbutton'), '<i class="' + editicon + '"></i>');
+
+            primstack
+                .append(valuenode)
+                .append(editbutton)
+                .addClass("horizontal")
+            ;
+
+            editbutton
+                .data('type',      type)
+                .data('valuehtml', valuenode)
+            ;
+
+            return {'stack': primstack, 'valuehtml':valuenode};
+        }
+
+        function makearray(data, prefix, primaryvalue){
+            var htmlnode = newdiv('array', makeid(prefix, "array"), '');
+
+            var children = [];
+            for( var i = 0; i < data.length; i++ )
+            {
+                var holder = {};
+                var ret  = gentree(data[i], makeid(prefix, "array[" + i + "]"), primaryvalue, holder);
+                children.push(ret.valuehtml);
+                ret.valuehtml.data('parent', htmlnode);
+
+                var summarystr = (holder.val === undefined)  ? '' : holder.val;
+                var stack = makecontainerstack('element', prefix, i, ret.stack, ret.valuehtml, summarystr);
+                htmlnode.append(stack);
+            }
+            htmlnode.data('children', children);
+            return {'stack':htmlnode, 'valuehtml':htmlnode};
+        }
+
+        function makeobject(data, prefix, primaryvalue, summaryholder){
+            var htmlnode = newdiv('object', makeid(prefix, "object"), '');
+
+            var children = {};
+            var keys     = sortkeys(getkeys(data));
+            for( var i = 0; i < keys.length; i++ )
+            {
+                var key   = keys[i];
+                var pv    = config['rex-primaries'][key];
+                var usepv = (pv === undefined) ? primaryvalue : pv;
+                if( key === primaryvalue )
+                {
+                    summaryholder.val = data[key];
+                }
+
+                var ret = gentree(data[key], makeid(prefix, "object[" + key + "]"), usepv, summaryholder);
+                children[key] = ret.valuehtml;
+                ret.valuehtml.data('parent', htmlnode);
+
+                var stack = makecontainerstack('member', prefix, key, ret.stack, ret.valuehtml, '');
+                htmlnode.append(stack);
+            }
+            htmlnode.data('children', children);
+            return {'stack':htmlnode, 'valuehtml':htmlnode};
+        }
+
+        function gentree(data, prefix, primaryvalue, summaryholder)
+        {
+            var t = typeof(data);
+            if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
+            {
+                return makeprimitivestack(t, prefix, data);
+            }
+            if( data instanceof Array )
+            {
+                return makearray(data, prefix, primaryvalue);
+            }
+            if( data instanceof Object )
+            {
+                return makeobject(data, prefix, primaryvalue, summaryholder);
+            }
+            console.log("confused, now");
+        }
+
+        function printdom(htmlnode, depth)
+        {
+            if( !depth ) depth = 0;
+            var tab = Array(depth+1).join("  ");
+            switch(htmlnode.attr('class'))
+            {
+                case 'string':
+                case 'number':
+                case 'boolean':
+                case 'null':
+                    console.log(tab + '"' + htmlnode.text() + '"');
+                    break;
+                case 'array':
+                    (function printarray(){
+                        var kids = htmlnode.data('children');
+                        for( var i = 0; i < kids.length; i++ )
+                        {
+                            console.log(tab + i + ":");
+                            printdom(kids[i], depth+1);
+                        }
+                    })();
+                    break;
+                case 'object':
+                    (function printobject(){
+                        var kids = htmlnode.data('children');
+                        for( var key in kids )
+                        {
+                            var kid = kids[key];
+                            console.log(tab + key + ":");
+                            printdom(kid, depth+1);
+                        }
+                    })();
+                    break;
+            }
+        }
+
+        function extractdata(htmlnode)
+        {
+            switch(htmlnode.attr('class'))
+            {
+                case 'string':
+                case 'number':
+                case 'boolean':
+                case 'null':
+                    console.log(htmlnode);
+                    console.log(htmlnode.string());
+                    return htmlnode.string();
+                case 'array':
+                    return (function extractarray(){
+                        var ret = [];
+                        var kids = htmlnode.data('children');
+                        for( var i = 0; i < kids.length; i++ )
+                        {
+                            console.log(i + ":");
+                            var kid = kids[i];
+                            console.log(kid);
+                            var element = extractdata(kid);
+                            ret.push(element);
+                        }
+                        return ret;
+                    })();
+               case 'object':
+                    return (function printobject(){
+                        var ret = {};
+                        var kids = htmlnode.data('children');
+                        for( var key in kids )
+                        {
+                            console.log(key + ":");
+                            var kid = kids[key];
+                            console.log(kid);
+                            var member = extractdata(kid);
+                            ret[key] = member;
+                        }
+                        return ret;
+                    })();
+            }
+        }
+
+        function save()
+        {
+            var savedata = extractdata($('#root'));
+            console.log(savedata);
+            var savejson = JSON.stringify(savedata);
+            console.log(savejson);
+        }
+
+        function handleToggle(eventObject)
+        {
+            var sub       = $(this).data('valuehtml');
+            var summary   = $(this).data('summaryhtml');
+            var collapser = $(this.firstChild);
+            var direction = ( sub.is(':hidden') ) ? 'open' : 'closed';
+
+            // update collapser icon
+            collapser.attr('class', collapsers[$(this).data('type') + '-' + direction]);
+
+            if( direction === 'open' )
+            {
+                $(this).data('content').show();
+                if( summary ) summary.hide();
+                sub.show(200);
+           } else {
+                $(this).data('content').hide();
+                if( summary ) summary.show();
+
+                var parent = sub.data('parent').data('parent');
+                sub.hide({
+                    duration : 200,
+                    done     : function redrawparent(){
+                        parent.hide().show(0);
+                    }
+                });
+            }
+        }
+
+        function isNumber(n) {
+          return !isNaN(parseFloat(n)) && isFinite(n);
+        }
+
+        function validate(type, value)
+        {
+            console.log("type:", type);
+            switch(type)
+            {
+                case 'null':
+                    if( value === null || value === '' || value === 'null' )
+                    {
+                        return true;
+                    }
+                    alert("null fields must take null values");
+                    return false;
+                case 'string':
+                    return true;
+                case 'number':
+                    console.log(value);
+                    if( isNumber(value) )
+                    {
+                        return true;
+                    }
+                    alert("number fields must take numeric values");
+                    return false;
+                case 'boolean':
+                    if( value === true || value === false || value === 'true' || value === 'false' )
+                    {
+                        return true;
+                    }
+                    alert("boolean fields must take true/false values");
+                    return false;
+            }
+            alert('unknown field type: ' + type);
+            return false;
+        }
+
+        function handleEdit(eventObject)
+        {
+            var editbutton   = $(this);
+            var displayfield = editbutton.data('valuehtml');
+            var type         = editbutton.data('type');
+            var parent       = displayfield.parent();
+
+            var typefield = $('<select></select');
+            var types = ['null','boolean','number','string'];
+            for(var i = 0; i < types.length; i++)
+            {
+                var option = $('<option value="' + types[i] + '" ' + ((types[i] == type) ? 'selected' : '') + '>' + types[i] + '</option>');
+                typefield.append(option);
+            }
+            var editfield = $('<input type="text" value="' + displayfield.text() + '"></input>');
+            parent.append(typefield);
+            parent.append(editfield);
+
+            displayfield.hide();
+            editbutton.hide();
+
+            editfield.keypress(function editkeypress(event){
+                if( event.which == 13 ) // return
+                {
+                    var value = editfield.val();
+                    var selectedtype = typefield.val();
+                    var changed = (value != displayfield.text() || type != selectedtype);
+                    if( !changed || validate(selectedtype, value) )
+                    {
+                        editfield.hide();
+                        typefield.hide();
+
+                        displayfield.show();
+                        editbutton.show();
+
+                        if( changed )
+                        {
+                            displayfield.text(value);
+                            displayfield.attr('class', selectedtype);
+                            editbutton.data('type', selectedtype);
+
+                            console.log('should probably also submit the new data to be saved');
+                        }
+                    }
+                }
+            });
+            typefield.change(function changetype(){
+                var newtype = $(this).val();
+                if( newtype !== type )
+                {
+                    switch(newtype)
+                    {
+                        case 'null':
+                            editfield.val('null');
+                            break;
+                        case 'boolean':
+                            editfield.val('false');
+                            break;
+                        case 'number':
+                            editfield.val('0');
+                            break;
+                        case 'string':
+                            editfield.val('text');
+                            break;
+                    }
+                } else {
+                    editfield.val(displayfield.text());
+                }
+            });
+        }
+
+        $(function initialize(){
+            $.ajax("getdoc")
+                .done(function gotjson(returned_data, stringStatus, jqXHR){
+                    var data = JSON.parse(returned_data);
+                    var summaryholder = {};
+
+                    getconfig(data);
+
+                    sub = gentree(data, "root", '', summaryholder);
+
+                    var htmlroot = $('#root')
+                        .attr('class',    'array')
+                        .data('parent',   null)
+                        .data('children', [sub.stack]);
+                    htmlroot.append(sub.stack);
+                    sub.stack.data('parent', htmlroot);
+
+                    printdom(htmlroot);
+
+                    $('.controller').click(handleToggle);
+                    $('.editbutton').click(handleEdit);
+
+                    // save();
+                });
+        });
+    </script>
+</html>
