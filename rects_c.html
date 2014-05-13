@@ -29,10 +29,14 @@
             .string, .null, .number, .boolean, .member, .element, .summary {
                 outline : 1px solid black;
             }
+            #message {
+                color : red;
+            }
         </style>
     </head>
     <body>
-        Click on chevrons to expand/collapse.
+        <div id="instructions">Click on chevrons to expand/collapse.</div>
+        <div id="message"></div>
         <div id="root"></div>
     </body>
     <script language="javascript">
@@ -338,6 +342,21 @@
             saveconfig(savedata);
             var savejson = JSON.stringify(savedata);
             console.log(savejson);
+            $.ajax("savedoc",
+                {
+                    'type' : 'POST',
+                    'data' : {'file':savejson}
+                })
+                .done(function savedjson(returned_data, stringStatus, jqXHR){
+                    var data = JSON.parse(returned_data);
+                    if( data.success === 'true' )
+                    {
+                        $('#message').text("saved, I think!");
+                        setTimeout(function(){
+                            $('#message').text('');
+                        }, 5000);
+                    }
+                });
         }
 
         function handleToggle(eventObject)
@@ -447,7 +466,7 @@
                             displayfield.attr('class', selectedtype);
                             editbutton.data('type', selectedtype);
 
-                            console.log('should probably also submit the new data to be saved');
+                            save();
                         }
                     }
                 }
@@ -499,7 +518,7 @@
                     $('.controller').click(handleToggle);
                     $('.editbutton').click(handleEdit);
 
-                    save();
+                    // save();
                 });
         });
     </script>

@@ -1,12 +1,15 @@
-var express = require('express');
+// var express = require('express');
+// app.use(express.json());
 
 var fs   = require('fs');
 var url  = require('url');
 var http = require('http');
 var path = require('path');
+var qs = require('querystring');
 
 function mainpage(req, res)
 {
+    console.log("mainpage()");
     var filename = 'rects_c.html';
     fs.readFile(filename, "binary", function(err, file) {
       if(err) {
@@ -19,11 +22,11 @@ function mainpage(req, res)
       res.write(file, "binary");
       res.end();
     });
-    console.log("mainpage()");
 }
 
 function getdoc(req, res)
 {
+    console.log("getdoc()");
     var filename = 'dnd.json';
     fs.readFile(filename, "binary", function(err, file) {
       if(err) {
@@ -36,11 +39,11 @@ function getdoc(req, res)
       res.write(file, "binary");
       res.end();
     });
-    console.log("getdoc()");
 }
 
 function savedoc(req, res)
 {
+    console.log("savedoc()");
     var method = req.method;
     if( method !== 'POST' )
     {
@@ -50,10 +53,30 @@ function savedoc(req, res)
         return;
     }
 
-    var filename="saved.json";
-    console.log("I should probably do something with this data");
-
-    console.log("savedoc()");
+    var body = '';
+    req.on('data', function(data){
+        body += data;
+    });
+    req.on('end', function(){
+        var POST = qs.parse(body);
+        // console.log(POST);
+        var filedata = POST.file;
+        filedata = JSON.stringify(JSON.parse(filedata), null, '  ');
+        var filename = "saved.json";
+        fs.writeFile(filename, filedata, {}, function(err){
+            if( err )
+            {
+                console.log("error saving:", err);
+                res.writeHead(500);
+                res.write(JSON.stringify({'success':false, 'error':err}));
+                res.end();
+            } else {
+                res.writeHead(200);
+                res.write(JSON.stringify({'success':true}));
+                res.end();
+            }
+        });
+    });
 }
 
 function dispatch(req, res)
