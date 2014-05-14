@@ -30,6 +30,14 @@
             * {
                 /*outline : 1px solid #DDD;*/
                 padding : 2px;
+                opacity : 1.0;
+                -webkit-transition : opacity 1s;
+                -moz-transition    : opacity 1s;
+                -o-transition      : opacity 1s;
+                transition         : opacity 1s;
+            }
+            .hidden {
+                opacity : 0.0 !important;
             }
             .string, .null, .number, .boolean, .member, .element, .summary {
                 outline : 1px solid black;
@@ -121,103 +129,79 @@
                 return keys;
             }
 
-            function makeid(prefix, current)
+            function newdiv(type, value)
             {
-                return prefix + '-' + current;
+                return $('<div>' + value + '</div>').addClass(type);
             }
-            function newdiv(type, id, value)
+            function makecontainerstack(type, index, valwrapper, valuenode, summarystr)
             {
-                return $('<div>' + value + '</div>')
-                    .addClass(type)
-                    // .attr('id', id)
+                var label = newdiv('label', index);
+
+                var collapsebutton = newdiv('controller', '<i class="' + collapsers[type + '-open'] + '"></i>')
+                    .data('type',       type)
+                    .data('valuehtml',  valuenode)
+                    .data('content',    valwrapper)
                 ;
-            }
-            function makecontainerstack(type, prefix, index, valwrapper, valuenode, summarystr)
-            {
-                var wrapper    = newdiv(type,    makeid(prefix, type),    '');
-                var labelstack = newdiv('labelstack', makeid(prefix, 'labelstack'), '');
-                var label      = newdiv('label', makeid(prefix, 'label'), index);
 
-                if( type === 'element' )
-                {
-                    labelstack.addClass('vertical');
-                    collapser = collapsers['element-open'];
-                } else if( type === 'member' ) {
-                    labelstack.addClass('horizontal');
-                    collapser = collapsers['member-open'];
-                }
-
-                var collapsebutton = newdiv('controller', makeid(prefix, 'collapsebutton'), '<i class="' + collapser + '"></i>');
-
-                labelstack
+                var labelstack = newdiv('labelstack', '')
+                    .addClass((type === 'element') ? 'vertical' : 'horizontal')
                     .append(collapsebutton)
                     .append(label)
                 ;
 
-                wrapper
+                var wrapper = newdiv(type, '')
                     .append(labelstack)
                     .append(valwrapper)
                 ;
 
-                collapsebutton
-                    .data('type',       type)
-                    .data('valuehtml',  valuenode)
-                    .data('collapser',  collapsebutton)
-                    .data('label',      label)
-                    .data('content',    valwrapper)
-                ;
-
-                if( summarystr !== undefined && summarystr !== null && summarystr !== '')
+                if( summarystr )
                 {
-                    var summary = newdiv('summary', makeid(prefix, 'summary'), summarystr)
-                        .hide();
+                    var summary = newdiv('summary', summarystr).hide();
                     wrapper.append(summary);
                     collapsebutton.data('summaryhtml', summary);
                 }
                 return wrapper;
             }
-            function makeprimitivestack(type, prefix, data)
+            function makeprimitivestack(type, data)
             {
-                var primstack  = newdiv('primstack',  makeid(prefix, 'primstack'),  '');
-                var valuenode  = newdiv(type,         makeid(prefix, type),         data);
-                var editbutton = newdiv('editbutton', makeid(prefix, 'editbutton'), '<i class="' + editicon + '"></i>');
+                var valuenode = newdiv(type, data);
 
-                primstack
+                var editbutton = newdiv('editbutton', '<i class="' + editicon + '"></i>')
+                    .data('type',      type)
+                    .data('valuehtml', valuenode)
+                ;
+
+                var primstack = newdiv('primstack',  '')
                     .append(valuenode)
                     .append(editbutton)
                     .addClass("horizontal")
                 ;
 
-                editbutton
-                    .data('type',      type)
-                    .data('valuehtml', valuenode)
-                ;
-
                 return {'stack': primstack, 'valuehtml':valuenode};
             }
 
-            function makearray(data, prefix, primaryvalue)
+            function makearray(data, primaryvalue)
             {
-                var htmlnode = newdiv('array', makeid(prefix, "array"), '');
+                var htmlnode = newdiv('array', '');
 
                 var children = [];
                 for( var i = 0; i < data.length; i++ )
                 {
                     var holder = {};
-                    var ret  = gentree(data[i], makeid(prefix, "array[" + i + "]"), primaryvalue, holder);
+                    var ret  = gentree(data[i], primaryvalue, holder);
                     children.push(ret.valuehtml);
                     ret.valuehtml.data('parent', htmlnode);
 
                     var summarystr = (holder.val === undefined)  ? '' : holder.val;
-                    var stack = makecontainerstack('element', prefix, i, ret.stack, ret.valuehtml, summarystr);
+                    var stack = makecontainerstack('element', i, ret.stack, ret.valuehtml, summarystr);
                     htmlnode.append(stack);
                 }
                 htmlnode.data('children', children);
                 return {'stack':htmlnode, 'valuehtml':htmlnode};
             }
-            function makeobject(data, prefix, primaryvalue, summaryholder)
+            function makeobject(data, primaryvalue, summaryholder)
             {
-                var htmlnode = newdiv('object', makeid(prefix, "object"), '');
+                var htmlnode = newdiv('object', '');
 
                 var children = {};
                 var keys     = sortkeys(getkeys(data));
@@ -231,30 +215,30 @@
                         summaryholder.val = data[key];
                     }
 
-                    var ret = gentree(data[key], makeid(prefix, "object[" + key + "]"), usepv, summaryholder);
+                    var ret = gentree(data[key], usepv, summaryholder);
                     children[key] = ret.valuehtml;
                     ret.valuehtml.data('parent', htmlnode);
 
-                    var stack = makecontainerstack('member', prefix, key, ret.stack, ret.valuehtml, '');
+                    var stack = makecontainerstack('member', key, ret.stack, ret.valuehtml, '');
                     htmlnode.append(stack);
                 }
                 htmlnode.data('children', children);
                 return {'stack':htmlnode, 'valuehtml':htmlnode};
             }
-            function gentree(data, prefix, primaryvalue, summaryholder)
+            function gentree(data, primaryvalue, summaryholder)
             {
                 var t = typeof(data);
                 if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
                 {
-                    return makeprimitivestack(t, prefix, data);
+                    return makeprimitivestack(t, data);
                 }
                 if( data instanceof Array )
                 {
-                    return makearray(data, prefix, primaryvalue);
+                    return makearray(data, primaryvalue);
                 }
                 if( data instanceof Object )
                 {
-                    return makeobject(data, prefix, primaryvalue, summaryholder);
+                    return makeobject(data, primaryvalue, summaryholder);
                 }
                 console.log("confused, now");
             }
@@ -361,30 +345,30 @@
 
             function handleToggle(eventObject)
             {
-                var sub       = $(this).data('valuehtml');
-                var summary   = $(this).data('summaryhtml');
-                var collapser = $(this.firstChild);
-                var direction = ( sub.is(':hidden') ) ? 'open' : 'closed';
+                var $sub       = $(this).data('content');
+                var $inner     = $(this).data('valuehtml');
+                var $summary   = $(this).data('summaryhtml');
+                var $collapser = $(this.firstChild);
+                var direction = ( $sub.is(':hidden') ) ? 'open' : 'closed';
 
                 // update collapser icon
-                collapser.attr('class', collapsers[$(this).data('type') + '-' + direction]);
+                $collapser.attr('class', collapsers[$(this).data('type') + '-' + direction]);
 
                 if( direction === 'open' )
                 {
-                    $(this).data('content').show();
-                    if( summary ) summary.hide();
-                    sub.show(200);
-               } else {
-                    $(this).data('content').hide();
-                    if( summary ) summary.show();
+                    if( $summary ) $summary.hide();
+                    $sub.show();
 
-                    var parent = sub.data('parent').data('parent');
-                    sub.hide({
-                        duration : 200,
-                        done     : function redrawparent(){
-                            parent.hide().show(0);
-                        }
-                    });
+                    setTimeout(function(){
+                        $sub.removeClass('hidden');
+                    }, 0);
+               } else {
+                    if( $summary ) $summary.show();
+                    var parent = $inner.data('parent').data('parent');
+                    $sub.addClass('hidden');
+                    setTimeout(function(){
+                        $sub.hide();
+                    }, 1000);
                 }
             }
 
@@ -427,71 +411,71 @@
             }
             function handleEdit(eventObject)
             {
-                var editbutton   = $(this);
-                var displayfield = editbutton.data('valuehtml');
-                var type         = editbutton.data('type');
+                var $editbutton  = $(this);
+                var displayfield = $editbutton.data('valuehtml');
+                var type         = $editbutton.data('type');
                 var parent       = displayfield.parent();
 
-                var typefield = $('<select></select');
+                var $typefield = $('<select></select');
                 var types = ['null','boolean','number','string'];
                 for(var i = 0; i < types.length; i++)
                 {
-                    var option = $('<option value="' + types[i] + '" ' + ((types[i] == type) ? 'selected' : '') + '>' + types[i] + '</option>');
-                    typefield.append(option);
+                    var $option = $('<option value="' + types[i] + '" ' + ((types[i] == type) ? 'selected' : '') + '>' + types[i] + '</option>');
+                    $typefield.append($option);
                 }
-                var editfield = $('<input type="text" value="' + displayfield.text() + '"></input>');
-                parent.append(typefield);
-                parent.append(editfield);
+                var $editfield = $('<input type="text" value="' + displayfield.text() + '"></input>');
+                parent.append($typefield);
+                parent.append($editfield);
 
                 displayfield.hide();
-                editbutton.hide();
+                $editbutton.hide();
 
-                editfield.keypress(function editkeypress(event){
+                $editfield.keypress(function editkeypress(event){
                     if( event.which == 13 ) // return
                     {
-                        var value = editfield.val();
-                        var selectedtype = typefield.val();
+                        var value = $editfield.val();
+                        var selectedtype = $typefield.val();
                         var changed = (value != displayfield.text() || type != selectedtype);
                         if( !changed || validate(selectedtype, value) )
                         {
-                            editfield.hide();
-                            typefield.hide();
+                            $editfield.hide();
+                            $typefield.hide();
 
                             displayfield.show();
-                            editbutton.show();
+                            $editbutton.show();
 
                             if( changed )
                             {
                                 displayfield.text(value);
                                 displayfield.attr('class', selectedtype);
-                                editbutton.data('type', selectedtype);
+                                $editbutton.data('type', selectedtype);
 
                                 save();
                             }
                         }
                     }
                 });
-                typefield.change(function changetype(){
+                $typefield.change(function changetype(){
                     var newtype = $(this).val();
                     if( newtype !== type )
                     {
                         switch(newtype)
                         {
                             case 'null':
-                                editfield.val('null');
+                                $editfield.val('null');
                                 break;
                             case 'boolean':
-                                editfield.val('false');
+                                $editfield.val('false');
                                 break;
                             case 'number':
-                                editfield.val('0');
+                                $editfield.val('0');
                                 break;
                             case 'string':
-                                editfield.val('text');
+                                $editfield.val('text');
                                 break;
                         }
                     } else {
-                        editfield.val(displayfield.text());
+                        $editfield.val(displayfield.text());
                     }
                 });
             }
