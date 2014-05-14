@@ -7,13 +7,13 @@ var bodyParser = require('body-parser');
 
 var port = 1338;
 var app = express()
-  .get('/',         mainpage)
-  .get('/getdoc',   getdoc)
-  .post('/savedoc', bodyParser(), savedoc)
-  .get('/favicon.ico', function(req, res){
-    res.send(404, 'No favicon');
-  })
-  .listen(port);
+    .get('/',                       mainpage)
+    .get('/getdoc',                 getdoc)
+    .post('/savedoc', bodyParser(), savedoc)
+    .get('/favicon.ico', function(req, res){
+        res.send(404, 'No favicon');
+    })
+    .listen(port);
 console.log("listening on ", port);
 
 function mainpage(req, res)
