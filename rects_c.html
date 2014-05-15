@@ -406,23 +406,26 @@
                     if( validator.func(value) ) return true;
                     alert(validator.err); return false;
                 }
-                var $editbutton  = $(this);
-                var displayfield = $editbutton.data('$valuehtml');
-                var type         = $editbutton.data('type');
-                var parent       = displayfield.parent();
+                var $editbutton   = $(this);
+                var type   = $editbutton.data('type');
+
+                var $displayfield = $editbutton.data('$valuehtml');
+                var parent = $displayfield.parent();
 
                 var $typefield = $('<select></select');
                 var types = ['null','boolean','number','string'];
                 for(var i = 0; i < types.length; i++)
                 {
-                    var $option = $('<option value="' + types[i] + '" ' + ((types[i] == type) ? 'selected' : '') + '>' + types[i] + '</option>');
+                    var cur = types[i];
+                    var sel = ((cur == type) ? 'selected' : '');
+                    var $option = $('<option value="' + cur + '" ' + sel + '>' + cur + '</option>');
                     $typefield.append($option);
                 }
-                var $editfield = $('<input type="text" value="' + displayfield.text() + '"></input>');
+                var $editfield = $('<input type="text" value="' + $displayfield.text() + '"></input>');
                 parent.append($typefield);
                 parent.append($editfield);
 
-                displayfield.hide();
+                $displayfield.hide();
                 $editbutton.hide();
 
                 $editfield.keypress(function editkeypress(event){
@@ -430,19 +433,19 @@
                     {
                         var value = $editfield.val();
                         var selectedtype = $typefield.val();
-                        var changed = (value != displayfield.text() || type != selectedtype);
+                        var changed = (value != $displayfield.text() || type != selectedtype);
                         if( !changed || validate(selectedtype, value) )
                         {
                             $editfield.hide();
                             $typefield.hide();
 
-                            displayfield.show();
+                            $displayfield.show();
                             $editbutton.show();
 
                             if( changed )
                             {
-                                displayfield.text(value);
-                                displayfield.attr('class', selectedtype);
+                                $displayfield.text(value);
+                                $displayfield.attr('class', selectedtype);
                                 $editbutton.data('type', selectedtype);
 
                                 save();
@@ -453,7 +456,7 @@
                 $typefield.change(function changetype(){
                     var newtype = $(this).val();
                     var defaults = {'null':'null', 'boolean':'false', 'number':'0', 'string':'text'};
-                    $editfield.val( (newtype !== type) ? defaults[newtype] : displayfield.text() );
+                    $editfield.val( (newtype !== type) ? defaults[newtype] : $displayfield.text() );
                 });
             }
 
