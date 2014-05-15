@@ -1,0 +1,52 @@
+{formula}:        = {scalar}
+{scalar}:         {number}
+                  {string}
+                  {bool}
+                  {null}
+                  {scalar_path}
+                  {fn_call}
+{number}:         {integer}
+                  {float}
+{fn_call}:        {unary}     ( {scalar}      )
+                  {binary}    ( {scalar}      , {scalar}      )
+                  {mixed}     ( {scalar}      , {tensor_path} )
+                  {aggregate} ( {tensor_path} )
+{unary}:          neg
+                  abs
+{binary}:         add
+                  sub
+                  mul
+                  div
+                  mod
+{mixed}:          count
+                  find
+{aggregate}:      sum
+                  prod
+                  min
+                  max
+                  mean
+{null}:           null
+{bool}:           true
+                  false
+{string}:         ' [(anything but \) \\ \']* '
+{integer}:        [-] {nonneg}
+{nonneg}:         0
+                  {(1-9)} [{digits}]
+{float}:          {integer} . [{digits}]
+{digits}:         (0-9)*
+{index}:          {scalar_index}
+                  *
+{key}:            {scalar_key}
+                  *
+{scalar_index}:   {nonneg}
+{scalar_key}:     {string}
+{scalar_path}:    {starter} [ {scalar_subpath} ]
+{tensor_path}:    {starter} [ {tensor_subpath} ]
+{starter}:        root
+                  this
+{scalar_subpath}: .elements [ {scalar_index} ] [{scalar_subpath}]
+                  .members  [ {scalar_key}   ] [{scalar_subpath}]
+                  .parent
+{tensor_subpath}: .elements [ {index}        ] [{tensor_subpath}]
+                  .members  [ {key}          ] [{tensor_subpath}]
+                  .parent
