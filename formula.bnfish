@@ -40,8 +40,8 @@
                   *
 {scalar_index}:   {nonneg}
 {scalar_key}:     {string}
-{scalar_path}:    {starter} [ {scalar_subpath} ]
-{tensor_path}:    {starter} [ {tensor_subpath} ]
+{scalar_path}:    {starter} [{scalar_subpath}]
+{tensor_path}:    {starter} [{tensor_subpath}]
 {starter}:        root
                   this
 {scalar_subpath}: .elements [ {scalar_index} ] [{scalar_subpath}]
