@@ -8,7 +8,7 @@ formula_candidates = [
     '=add(3, 4)',
     '=neg(3)',
     '=count(3)',
-    '=sum(3',
+    // '=sum(3',
     // '=sum',
     // '=sum(3)q',
     // '=add(3, this.parent.children[5])',
@@ -32,6 +32,10 @@ formula_candidates = [
 
 function startswith(bigstring, prefix)
 {
+    if( bigstring === undefined )
+    {
+        return false;
+    }
     bigstring = bigstring.trim();
     return ( bigstring.substring(0, prefix.length) === prefix );
 }
@@ -61,7 +65,9 @@ function eattoken(bigstring, tokens, errstr)
         };
     }
     if(errstr)
+    {
         console.log(errstr);
+    }
     return false;
 }
 
@@ -193,7 +199,7 @@ productions = {
             var p = params.value.param1;
             if( p === undefined )
             {
-                console.log("can't apply function to param", fname, p);
+                console.log("can't apply function '" + fname + "' to param: ", p);
                 return undefined;
             }
             return unary_fns[fname](p);
@@ -208,7 +214,7 @@ productions = {
             var p2 = params.value.param2;
             if( p1 === undefined || p2 === undefined )
             {
-                console.log("can't apply function to params", fname, p1, p2);
+                console.log("can't apply function '" + fname + "' to params:", p1, ",", p2);
                 return undefined;
             }
             return binary_fns[fname](p1, p2);
@@ -223,7 +229,7 @@ productions = {
             var p2 = params.value.param2;
             if( p1 === undefined || p2 === undefined || !Array.isArray(p2) )
             {
-                console.log("can't apply function to params", fname, p1, p2);
+                console.log("can't apply function '" + fname + "' to params:", p1, ",", p2);
                 return undefined;
             }
             return mixed_fns[fname](p1, p2);
@@ -237,7 +243,7 @@ productions = {
             var p = params.value.param1;
             if( p === undefined || !Array.isArray(p) )
             {
-                console.log("can't apply function to param", fname, p);
+                console.log("can't apply function '" + fname + "' to param:", p);
                 return undefined;
             }
             return aggregate_fns[fname](params.value.param);
@@ -370,10 +376,10 @@ productions = {
             console.log(io);
             return success;
         } else {
-            console.log("no subpath");
-            return false;
+            io.value = "root";
+            io.remainder = remainder;
+            return true;
         }
-        return true;
     },
     'p_scalar_path' : {
         'cases'    : p_scalar_path_prefixes = ['root', 'this'],
@@ -434,8 +440,6 @@ productions = {
                     return false;
                 }
 
-                console.log("remainder:", params_io.remainder);
-
                 var rparen = eattoken(params_io.remainder, right, "right paren expected to finish function call params");
                 if( rparen === false ) { return false; }
 
@@ -447,6 +451,10 @@ productions = {
                     io.value = prod.apply(fname.token, params_io);
                 }
                 io.remainder = rparen.remainder;
+                if( io.value === undefined )
+                {
+                    return false;
+                }
 
                 return true;
             }
