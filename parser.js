@@ -1,18 +1,25 @@
 var quote = "'";
 var bslash = "\\";
 formula_candidates = [
-    // '=sum(3)',
+    '=sum(root)',
+    '=sum(root.children[*])',
+    '=sum(3)',
+    '=add(3)',
+    '=add(3, 4)',
+    '=neg(3)',
+    '=count(3)',
+    '=sum(3',
+    // '=sum',
     // '=sum(3)q',
     // '=add(3, this.parent.children[5])',
     // '=this.parent',
     // '=count(7,this.parent.children[*])',
     // '=this.parent.children[*]',
     // 'sum(3)',
-    // 'sum(3)',
-    '=57',
-    '=57q',
-    '=-23',
-    '=1.57',
+    // '=57',
+    // '=57q',
+    // '=-23',
+    // '=1.57',
     // '=null',
     // "='hello world'",
     // "='hello world'q",
@@ -25,10 +32,12 @@ formula_candidates = [
 
 function startswith(bigstring, prefix)
 {
+    bigstring = bigstring.trim();
     return ( bigstring.substring(0, prefix.length) === prefix );
 }
 function stringafter(bigstring, prefix)
 {
+    bigstring = bigstring.trim();
     return bigstring.substring(prefix.length);
 }
 function startswithany(bigstring, prefixes)
@@ -41,42 +50,198 @@ function startswithany(bigstring, prefixes)
     }
     return false;
 }
+function eattoken(bigstring, tokens, errstr)
+{
+    var which = startswithany(bigstring, tokens);
+    if( which )
+    {
+        return {
+            'token'     : which,
+            'remainder' : stringafter(bigstring, which)
+        };
+    }
+    if(errstr)
+        console.log(errstr);
+    return false;
+}
+
+unary_fns = {
+    'abs' : function(p) { return abs(p); },
+    'neg' : function(p) { return -p; },
+    'not' : function(p) { return !p; },
+};
+binary_fns = {
+    'add' : function(p1, p2){ return p1 + p2; },
+};
+aggregate_fns = {
+    'sum' : function(a){
+        var sum = 0;
+        for(var i = 0; i < a.length; i++)
+        { sum += a[i]; }
+        return sum;
+    },
+};
+mixed_fns = {
+     // need "find" but that's aggregate-return, not scalar
+     'count' : function(target, a){
+        var count = 0;
+        for(var i = 0; i < a.length; i++)
+        { if(a[i] === target ) count += 1; }
+        return count;
+    },
+};
 
 productions = {
     'p_scalar_subpath' : {
-        'prefixes' : function(){return ['.'];},
+        'prefixes' : function(){return ['.elements','.members','.parent'];},
         'parse'    : function(v, io) {
             console.log("scalar_subpath:", v);
+            io.remainder = v;
             return true;
         },
     },
-    'p_unary_call' : {
-        'prefixes' : function(){return ['neg', 'abs'];},
+    'p_tensor_subpath' : {
+        'prefixes' : function(){return ['.elements','.members','.parent'];},
         'parse'    : function(v, io) {
-            console.log("unary_call:", v);
+            console.log("tensor_subpath:", v);
+            io.remainder = v;
             return true;
         },
     },
-    'p_binary_call' : {
-        'prefixes' : function(){return ['add', 'sub', 'mul', 'div', 'mod'];},
-        'parse'    : function(v, io) {
-            console.log("binary_call:", v);
+
+    /*
+    {tensor_subpath}: .elements [ {index}        ] [{tensor_subpath}]
+                  .members  [ {key}          ] [{tensor_subpath}]
+                  .parent
+    */
+    'p_params_helper' : p_params_helper = function(v, io, params){
+        var comma = ',';
+        var success;
+        console.log(params.label, v);
+
+        var param1_io = {};
+        success = productions.p_scalar.parse(v, param1_io);
+        if( !success )
+        {
+            return false;
+        }
+
+        if( params.second_prod )
+        {
+            var coma = eattoken(param1_io.remainder, comma, 'comma required between binary function parameters');
+            if( coma === false ) { return false; }
+
+            var param2_io = {};
+            success = params.second_prod.parse(coma.remainder, param2_io);
+            if( !success )
+            {
+                return false;
+            }
+
+            io.value = { 'param1' : param1_io.value, 'param2' : param2_io.value};
+            io.remainder = param2_io.remainder;
             return true;
+        } else {
+            io.value = { 'param1' : param1_io.value };
+            io.remainder = param1_io.remainder;
+            return true;
+        }
+    },
+    'p_unary_params' : {
+        'prefixes' : function(){return ['.'];},
+        'parse'    : function(v, io) {
+            return p_params_helper(v, io, {
+                'label':'unary_params:',
+                'first_prod' : productions.p_scalar,
+            });
         },
     },
-    'p_mixed_call' : {
-        'prefixes' : function(){return ['count'];}, // <<FIXME>> need 'find' but that's an aggregate-RETURN call
+    'p_aggregate_params' : {
+        'prefixes' : function(){return ['.'];},
         'parse'    : function(v, io) {
-            console.log("mixed_call:", v);
-            return true;
+            return p_params_helper(v, io, {
+                'label':'aggregate_params:',
+                'first_prod' : productions.p_tensor_path,
+            });
         },
     },
-    'p_aggregate_call' : {
-        'prefixes' : function(){return ['sum', 'prod', 'min', 'max', 'mean'];},
+    'p_binary_params' : {
+        'prefixes' : function(){return ['.'];},
         'parse'    : function(v, io) {
-            console.log("aggregate_call:", v);
-            return true;
+            return p_params_helper(v, io, {
+                'label':'mixed_params:',
+                'first_prod' : productions.p_scalar,
+                'second_prod': productions.p_scalar,
+            });
         },
+    },
+    'p_mixed_params' : {
+        'prefixes' : function(){return ['.'];},
+        'parse'    : function(v, io) {
+            return p_params_helper(v, io, {
+                'label':'mixed_params:',
+                'first_prod' : productions.p_scalar,
+                'second_prod': productions.p_tensor_path,
+            });
+        },
+    },
+    'p_unary' : {
+        'functions' : unary_fns,
+        'prefixes' : function(){return Object.keys(unary_fns);},
+        'params'   : function(){return 'p_unary_params';},
+        'apply'    : function(fname, params){
+            var p = params.value.param1;
+            if( p === undefined )
+            {
+                console.log("can't apply function to param", fname, p);
+                return undefined;
+            }
+            return unary_fns[fname](p);
+        }
+    },
+    'p_binary' : {
+        'functions' : binary_fns,
+        'prefixes' : function(){return Object.keys(binary_fns);},
+        'params'   : function(){return 'p_binary_params';},
+        'apply'    : function(fname, params){
+            var p1 = params.value.param1;
+            var p2 = params.value.param2;
+            if( p1 === undefined || p2 === undefined )
+            {
+                console.log("can't apply function to params", fname, p1, p2);
+                return undefined;
+            }
+            return binary_fns[fname](p1, p2);
+        }
+    },
+    'p_mixed' : {
+        'functions' : mixed_fns,
+        'prefixes' : function(){return Object.keys(mixed_fns);},
+        'params'   : function(){return 'p_mixed_params';},
+        'apply'    : function(fname, params){
+            var p1 = params.value.param1;
+            var p2 = params.value.param2;
+            if( p1 === undefined || p2 === undefined || !Array.isArray(p2) )
+            {
+                console.log("can't apply function to params", fname, p1, p2);
+                return undefined;
+            }
+            return mixed_fns[fname](p1, p2);
+        }
+    },
+    'p_aggregate' : {
+        'functions' : aggregate_fns,
+        'prefixes' : function(){return Object.keys(aggregate_fns);},
+        'params'   : function(){return 'p_aggregate_params';},
+        'apply'    : function(fname, params){
+            var p = params.value.param1;
+            if( p === undefined || !Array.isArray(p) )
+            {
+                console.log("can't apply function to param", fname, p);
+                return undefined;
+            }
+            return aggregate_fns[fname](params.value.param);
+        }
     },
     'p_number' : {
         'cases'    : p_number_cases = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-'],
@@ -184,60 +349,106 @@ productions = {
             return false;
         },
     },
+    'p_path_helper' : p_path_helper = function(v, io, parseparams){
+        var prefix = startswithany(v, parseparams.prefixes);
+        var remainder = stringafter(v, prefix);
+        if( prefix === false )
+        {
+            console.log(parseparams.error1);
+            return false;
+        }
+        console.log("starting element:", prefix);
+
+        // check for subpath and parse if present
+        var prod = parseparams.prod;
+        if( startswithany(remainder, prod.prefixes()) )
+        {
+            var path_io = {'initial':prefix};
+            var success = prod.parse(remainder, path_io);
+            io.value     = path_io.value;
+            io.remainder = path_io.remainder;
+            console.log(io);
+            return success;
+        } else {
+            console.log("no subpath");
+            return false;
+        }
+        return true;
+    },
     'p_scalar_path' : {
         'cases'    : p_scalar_path_prefixes = ['root', 'this'],
         'prefixes' : function(){return p_scalar_path_prefixes;},
         'parse'    : function(v, io) {
-            console.log("scalar_path:", v);
-            var prefix = startswithany(v, p_scalar_path_prefixes);
-            var remainder = stringafter(v, prefix);
-            if( prefix === false )
-            {
-                console.log("scalar path must start with root or this");
-                return false;
-            }
-            console.log("starting element:", prefix);
-
-            // check for subpath and parse if present
-            var prod = productions.p_scalar_subpath;
-            if( startswithany(remainder, prod.prefixes()) )
-            {
-                var path_io = {'initial':prefix};
-                var success = prod.parse(remainder, path_io);
-                io.value     = path_io.value;
-                io.remainder = path_io.remainder;
-                console.log(io);
-                return success;
-            } else {
-                console.log("no subpath");
-            }
-            return true;
+            return p_path_helper(v, io, {
+                'label'    : "scalar path:",
+                'prefixes' : p_scalar_path_prefixes,
+                'error1'   : 'scalar path must start with root or this',
+                'prod'     : productions.p_scalar_subpath,
+            });
+        },
+    },
+    'p_tensor_path' : {
+        'cases'    : p_tensor_path_prefixes = ['root', 'this'],
+        'prefixes' : function(){return p_tensor_path_prefixes;},
+        'parse'    : function(v, io) {
+            return p_path_helper(v, io, {
+                'label'    : "tensor path:",
+                'prefixes' : p_tensor_path_prefixes,
+                'error1'   : 'tensor path must start with root or this',
+                'prod'     : productions.p_tensor_subpath,
+            });
         },
     },
     'p_function_call' : {
-        'cases'    : p_function_call_cases = ['p_unary_call','p_binary_call','p_mixed_call','p_aggregate_call'],
+        'cases'    : p_function_call_cases = ['p_unary','p_binary','p_mixed','p_aggregate'],
         'prefixes' : function(){
             var ret = [];
             for(var i = 0; i < p_function_call_cases.length; i++)
             {
-                ret = ret.concat(productions[p_function_call_cases[i]].prefixes());
+                var fcase = p_function_call_cases[i];
+                var prod = productions[fcase];
+                ret = ret.concat(prod.prefixes());
             }
             return ret;
         },
         'parse'    : function(v, io) {
+            var left = '(', right = ')';
             console.log("function_call:", v);
             for(var i = 0; i < p_function_call_cases.length; i++)
             {
-                var production = productions[p_function_call_cases[i]];
-                if( startswithany( v, production.prefixes() ) )
+                var prod = productions[p_function_call_cases[i]];
+                // { cases, params, prefixes, parse }
+
+                var fname = eattoken(v, prod.prefixes(), null);
+                if( fname === false ) { continue; }
+                // fname = {token, remainder}
+
+                var lparen = eattoken(fname.remainder, left, "left paren expected to start function call params");
+                if( lparen === false ) { return false; }
+
+                var params_io = {};
+                var parm_prod = productions[prod.params()];
+                var success = parm_prod.parse(lparen.remainder, params_io);
+                if( !success )
                 {
-                    var func_io = {};
-                    var success = production.parse(v, func_io);
-                    io.value     = func_io.value;
-                    io.remainder = func_io.remainder;
-                    console.log(io);
-                    return success;
+                    return false;
                 }
+
+                console.log("remainder:", params_io.remainder);
+
+                var rparen = eattoken(params_io.remainder, right, "right paren expected to finish function call params");
+                if( rparen === false ) { return false; }
+
+                var collection_or_value = params_io.value;
+
+                var fns = prod.functions;
+                if( fns[fname.token] )
+                {
+                    io.value = prod.apply(fname.token, params_io);
+                }
+                io.remainder = rparen.remainder;
+
+                return true;
             }
             console.log("function call must start with a function keyword");
             return false;
@@ -278,23 +489,24 @@ productions = {
         'parse'    : function(v, io) {
             console.log("formula:", v);
             var init = '=';
-            if( startswith(v, init) )
-            {
-                var scalar_io = {};
-                var success = productions.p_scalar.parse(stringafter(v, init), scalar_io);
-                io.value     = scalar_io.value;
-                io.remainder = scalar_io.remainder;
-                if( success && scalar_io.remainder )
-                {
-                    console.log("didn't expect anything after formula, got:", scalar_io.remainder);
-                    return false;
-                }
-                console.log(io);
-                return success;
-            }
-            console.log("formula must start with " + init);
-            return false;
 
+            if( !startswith(v, init) )
+            {
+                console.log("formula must start with " + init);
+                return false;
+            }
+
+            var scalar_io = {};
+            var success = productions.p_scalar.parse(stringafter(v, init), scalar_io);
+            io.value     = scalar_io.value;
+            io.remainder = scalar_io.remainder;
+            if( success && scalar_io.remainder )
+            {
+                console.log("didn't expect anything after formula, got:", scalar_io.remainder);
+                return false;
+            }
+            console.log(io);
+            return success;
         }
     }
 };

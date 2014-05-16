@@ -7,17 +7,24 @@
                   {fn_call}
 {number}:         {integer}
                   {float}
-{fn_call}:        {unary}     ( {scalar}      )
-                  {binary}    ( {scalar}      , {scalar}      )
-                  {mixed}     ( {scalar}      , {tensor_path} )
-                  {aggregate} ( {tensor_path} )
+{fn_call}:        {unary}     ( {unary_params}  )
+                  {binary}    ( {binary_params} )
+                  {mixed}     ( {mixed_params}  )
+                  {aggregate} ( {aggr_params}   )
+{unary_params}:   {scalar}
+{binary_params}:  {scalar} , {scalar}
+{mixed_params}:   {scalar} , {tensor_path}
+{aggr_params}:    {tensor_path}
 {unary}:          neg
                   abs
+                  not
 {binary}:         add
                   sub
                   mul
                   div
                   mod
+                  and
+                  or
 {mixed}:          count
                   find
 {aggregate}:      sum
@@ -46,7 +53,7 @@
                   this
 {scalar_subpath}: .elements [ {scalar_index} ] [{scalar_subpath}]
                   .members  [ {scalar_key}   ] [{scalar_subpath}]
-                  .parent
+                  .parent                      [{tensor_subpath}]
 {tensor_subpath}: .elements [ {index}        ] [{tensor_subpath}]
                   .members  [ {key}          ] [{tensor_subpath}]
-                  .parent
+                  .parent                      [{tensor_subpath}]
