@@ -88,7 +88,7 @@ aggregate_fns = {
     },
 };
 mixed_fns = {
-     // need "find" but that's aggregate-return, not scalar
+     // need "find" but that's tensor-return, not scalar
      'count' : function(target, a){
         var count = 0;
         for(var i = 0; i < a.length; i++)
