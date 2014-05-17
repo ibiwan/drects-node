@@ -1,0 +1,26 @@
+LPAREN  (
+RPAREN  )
+LBRACK  [
+RBRACK  ]
+EQUALS  =
+COMMA   ,
+STAR    *
+QUOTE   '
+DOT     .
+
+NULL    null
+ROOT    root
+THIS    this
+
+NUMBER (value)
+STRING (value)
+S_INDEX (value)
+S_KEY (value)
+
+BOOL (true, false)
+UNARY (neg, abs, not)
+BINARY (add, sub, mul, div, mod, and, or)
+MIXED (count)
+AGGREGATE (sum, prod, min, max, mean)
+SUBPATH (elements, members, parent)
+

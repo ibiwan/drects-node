@@ -1,27 +1,186 @@
+for(var i = 0; i < 20; i++)
+    console.log();
+
+var puncts = {
+    '(' : 'LPAREN',
+    ')' : 'RPAREN',
+    '[' : 'LBRACK',
+    ']' : 'RBRACK',
+    '=' : 'EQUALS',
+    ',' : 'COMMA',
+    '*' : 'STAR',
+    '.' : 'DOT',
+    '-' : 'NEG',
+};
+var reserveds = {
+    'NULL'      : ['null'],
+    'ROOT'      : ['root'],
+    'THIS'      : ['this'],
+    'MIXED'     : ['count'],
+    'BOOL'      : ['true', 'false'],
+    'UNARY'     : ['neg', 'abs', 'not'],
+    'SUBPATH'   : ['elements', 'members', 'parent'],
+    'AGGREGATE' : ['sum', 'prod', 'min', 'max', 'mean'],
+    'BINARY'    : ['add', 'sub', 'mul', 'div', 'mod', 'and', 'or'],
+};
+var taggeds = [
+    'STRING',
+    'DIGITS',
+    'LABEL',
+];
+function lexstring(haystack)
+{
+    var chars = haystack.split('');
+    var substr = [];
+    for(var i = 0; i < chars.length; i++)
+    {
+        var c = chars[i];
+        if( i === 0 )
+        {
+            if( c === "'" ) // as it should be
+            {
+                continue;
+            }
+            console.log("string must start with single quote");
+            return false;
+        }
+        if( c === bslash ) // escape!
+        {
+            i++;
+            c = chars[i];
+            if( [bslash, quote].indexOf(c) === -1 )
+            {
+                console.log("backslash in a string must precede backslash or single quote");
+                return false;
+            }
+            substr.push(c);
+            continue;
+        }
+        if( c === "'" ) // end of string
+        {
+            var ret = substr.join('');
+            return {'string':substr.join(''), 'end_index':i};
+        }
+        substr.push(c);
+    }
+    console.log("unterminated string");
+    return false;
+}
+function lexdigits(haystack)
+{
+    var chars = haystack.split('');
+    var digits = [];
+    for(var i = 0; i < chars.length; i++)
+    {
+        var c = chars[i];
+        if( c >= '0' && c <= '9' )
+        {
+            digits.push(c);
+            continue;
+        }
+        return {'digits':digits.join(''), 'end_index':i};
+    }
+    console.log("lexdigits failed. ??");
+}
+function lexlabel(haystack)
+{
+    var chars = haystack.split('');
+    var label = [];
+    for(var i = 0; i < chars.length; i++)
+    {
+        var c = chars[i];
+        if( (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (['-','_'].indexOf(c) > -1) )
+        {
+            label.push(c);
+            continue;
+        }
+        break;
+    }
+    return {'label':label.join(''), 'end_index':i};
+}
+function lex(str)
+{
+    var tokenstream = [];
+
+    for(var i = 0; i < str.length; i++)
+    {
+        var c = str.substr(i, 1);
+        // console.log("c:", c);
+
+        if( c === "'" )
+        {
+            var ls = lexstring(str.substr(i));
+            i += ls.end_index;
+            tokenstream.push({'token':'STRING', 'tag':ls.string});
+            continue;
+        }
+        if( puncts[c] )
+        {
+            tokenstream.push(puncts[c]);
+            continue;
+        }
+        if( c >= '0' && c <= '9' )
+        {
+            var ld = lexdigits(str.substr(i));
+            i += ld.end_index - 1;
+            tokenstream.push({'token':'DIGITS', 'tag':ld.digits});
+            continue;
+        }
+
+        var found = false;
+        for( var key in reserveds )
+        {
+            var candidates = reserveds[key];
+            var word = startswithany(str.substr(i), candidates);
+            if( word )
+            {
+                i += word.length - 1;
+                tokenstream.push({'token':'KEYWORD', 'tag':word});
+                found = true;
+                continue;
+            }
+        }
+        if(found)
+            continue;
+
+        if( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) )
+        {
+            var ll = lexlabel(str.substr(i));
+            i += ll.end_index - 1;
+            tokenstream.push({'label':'LABEL', 'tag':ll.label});
+            continue;
+        }
+    }
+    return tokenstream;
+}
+
+
 var quote = "'";
 var bslash = "\\";
 formula_candidates = [
-    '=sum(root)',
-    '=sum(root.children[*])',
-    '=sum(3)',
-    '=add(3)',
-    '=add(3, 4)',
-    '=neg(3)',
-    '=count(3)',
+    // '=sum(root)',
+    // '=sum(root.members[*])',
+    // '=sum(3)',
+    // '=add(3)',
+    // '=add(3, 4)',
+    // '=neg(3)',
+    // '=count(3)',
     // '=sum(3',
     // '=sum',
     // '=sum(3)q',
-    // '=add(3, this.parent.children[5])',
-    // '=this.parent',
-    // '=count(7,this.parent.children[*])',
-    // '=this.parent.children[*]',
+    '=add(37, this.parent.elements[5])',
+    '=this.parent',
+    '=this.pa-rent',
+    '=count(7,this.parent.members[*])',
+    '=this.parent.elements[*]',
     // 'sum(3)',
     // '=57',
     // '=57q',
     // '=-23',
     // '=1.57',
     // '=null',
-    // "='hello world'",
+    "='hello world'",
+    "='hello world',",
     // "='hello world'q",
     // "='hello w"+bslash+quote+"orld!"+bslash+bslash+"!!'",
     // "='hello world!!!"+bslash+"'",
@@ -36,7 +195,7 @@ function startswith(bigstring, prefix)
     {
         return false;
     }
-    bigstring = bigstring.trim();
+    // bigstring = bigstring.trim();
     return ( bigstring.substring(0, prefix.length) === prefix );
 }
 function stringafter(bigstring, prefix)
@@ -521,11 +680,13 @@ productions = {
 
 function parse_formula(formula, io)
 {
-    var formula_io = {};
-    var success = productions.p_formula.parse(formula, formula_io);
-    io.value = formula_io.value;
-    console.log(io);
-    return success;
+    console.log(lex(formula));
+    // var formula_io = {};
+    // var success = productions.p_formula.parse(formula, formula_io);
+    // io.value = formula_io.value;
+    // console.log(io);
+    // return success;
+    return true;
 }
 
 for(var i = 0; i < formula_candidates.length; i++)
