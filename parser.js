@@ -8,7 +8,7 @@ formula_candidates = [
     // '=add(3, 4)',
     // '=neg(3)',
     // '=count(3)',
-    '=sum(3',
+    // '=sum(3',
     // '=sum',
     // '=sum(3)q',
     // '=add(37, this.parent.elements[5])',
@@ -21,7 +21,7 @@ formula_candidates = [
     // '=57q',
     // '=-23',
     // '=1.57',
-    // '=null',
+    '=null',
     // "='hello world'",
     // "='hello world',",
     // "='hello world'q",
@@ -112,7 +112,6 @@ function lexstring(haystack)
 }
 function lexdigits(haystack)
 {
-    console.log("haystack:", haystack);
     var chars = haystack.split('');
     var digits = [];
     for(var i = 0; i < chars.length; i++)
@@ -123,9 +122,9 @@ function lexdigits(haystack)
             digits.push(c);
             continue;
         }
-        return {'digits':digits.join(''), 'end_index':i};
+        break;
     }
-    console.log("lexdigits failed. ??");
+    return {'digits':digits.join(''), 'end_index':i};
 }
 function lexlabel(haystack)
 {
@@ -150,7 +149,6 @@ function lex(str)
     for(var i = 0; i < str.length; i++)
     {
         var c = str.substr(i, 1);
-        // console.log("c:", c);
 
         if( c === "'" )
         {
@@ -277,7 +275,7 @@ productions = {
         'prefixes' : function get_p_scalar_subpath_prefixes(){return [puncts_str.DOT];},
         'parse'    : function p_scalar_subpath_parse(v, io) {
             console.log("scalar_subpath:", v);
-            console.log("<<FIXME>> NOT HANDLED YET");
+console.log("<<FIXME>> NOT HANDLED YET");
             io.remainder = v;
             return true;
         },
@@ -286,7 +284,7 @@ productions = {
         'prefixes' : function get_p_tensor_subpath_prefixes(){return [puncts_str.DOT];},
         'parse'    : function p_tensor_subpath_parse(v, io) {
             console.log("tensor_subpath:", v);
-            console.log("<<FIXME>> NOT HANDLED YET");
+console.log("<<FIXME>> NOT HANDLED YET");
             io.remainder = v;
             return true;
         },
@@ -430,6 +428,7 @@ productions = {
         'parse'    : function p_number_parse(v, io) {
             console.log("number:", v);
             io.value = parseFloat(v[0].tag);
+console.log("<<FIXME>> need to handle floats"); // DOT
             if(isNaN(io.value))
             {
                 console.log("number could not be parsed");
@@ -677,6 +676,7 @@ productions = {
                     return success;
                 }
             }
+console.log("<<FIXME>> need to handle negation"); // NEG
             console.log("scalar must be number, string, bool, null, scalar path, or function call");
             return false;
         },
