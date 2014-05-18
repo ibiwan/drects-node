@@ -1,35 +1,35 @@
 var quote = "'";
 var bslash = "\\";
 formula_candidates = [
-    // '=sum(root)',
-    // '=sum(root.members[*])',
-    // '=sum(3)',
-    // '=add(3)',
-    // '=add(3, 4)',
-    // '=neg(3)',
-    // '=count(3)',
-    // '=sum(3',
-    // '=sum',
-    // '=sum(3)q',
-    // '=add(37, this.parent.elements[5])',
-    // '=this.parent',
-    // '=this.pa-rent',
-    // '=count(7,this.parent.members[*])',
-    // '=this.parent.elements[*]',
-    // 'sum(3)',
-    // '=57',
-    // '=57q',
-    // '=-23',
-    // '=1.57',
+    '=sum(root)',
+    '=sum(root.members[*])',
+    '=sum(3)',
+    '=add(3)',
+    '=add(3, 4)',
+    '=neg(3)',
+    '=count(3)',
+    '=sum(3',
+    '=sum',
+    '=sum(3)q',
+    '=add(37, this.parent.elements[5])',
+    '=this.parent',
+    '=this.pa-rent',
+    '=count(7,this.parent.members[*])',
+    '=this.parent.elements[*]',
+    'sum(3)',
+    '=57',
+    '=57q',
+    '=-23',
+    '=1.57',
     '=null',
-    // "='hello world'",
-    // "='hello world',",
-    // "='hello world'q",
-    // "='hello w"+bslash+quote+"orld!"+bslash+bslash+"!!'",
-    // "='hello world!!!"+bslash+"'",
-    // '=true',
-    // '=false',
-    // '=trueq',
+    "='hello world'",
+    "='hello world',",
+    "='hello world'q",
+    "='hello w"+bslash+quote+"orld!"+bslash+bslash+"!!'",
+    "='hello world!!!"+bslash+"'",
+    '=true',
+    '=false',
+    '=trueq',
 ];
 
 
@@ -153,13 +153,17 @@ function lex(str)
         if( c === "'" )
         {
             var ls = lexstring(str.substr(i));
+            if( ls === false )
+            {
+                return false;
+            }
             i += ls.end_index;
             tokenstream.push({'token':'STRING', 'tag':ls.string});
             continue;
         }
         if( puncts_dict[c] )
         {
-            tokenstream.push(puncts_dict[c]);
+            tokenstream.push({'token':puncts_dict[c], 'tag':null});
             continue;
         }
         if( c >= '0' && c <= '9' )
@@ -169,75 +173,30 @@ function lex(str)
             tokenstream.push({'token':'DIGITS', 'tag':ld.digits});
             continue;
         }
-
-        var found = false;
-        for( var key in reserveds )
-        {
-            var candidates = reserveds[key];
-            var word = startswithany(str.substr(i), candidates);
-            if( word )
-            {
-                i += word.length - 1;
-                tokenstream.push({'token':key, 'tag':word});
-                found = true;
-                continue;
-            }
-        }
-        if(found)
-        {
-            continue;
-        }
-
         if( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) )
         {
             var ll = lexlabel(str.substr(i));
             i += ll.end_index - 1;
-            tokenstream.push({'label':'LABEL', 'tag':ll.label});
+            var found = false;
+            for( var key in reserveds )
+            {
+                var candidates = reserveds[key];
+                if( candidates.indexOf(ll.label) > -1 )
+                {
+                    tokenstream.push({'token':key, 'tag':ll.label});
+                    found = true;
+                    continue;
+                }
+            }
+            if( found )
+            {
+                continue;
+            }
+            tokenstream.push({'token':'LABEL', 'tag':ll.label});
             continue;
         }
     }
     return tokenstream;
-}
-
-function startswith(bigstring, prefix)
-{
-    if( bigstring === undefined )
-    {
-        return false;
-    }
-    // bigstring = bigstring.trim();
-    return ( bigstring.substring(0, prefix.length) === prefix );
-}
-function stringafter(bigstring, prefix)
-{
-    bigstring = bigstring.trim();
-    return bigstring.substring(prefix.length);
-}
-function startswithany(bigstring, prefixes)
-{
-    for(var i = 0; i < prefixes.length; i++)
-    {
-        var prefix = prefixes[i];
-        if( startswith(bigstring, prefix) )
-            return prefix;
-    }
-    return false;
-}
-function eattoken(bigstring, tokens, errstr)
-{
-    var which = startswithany(bigstring, tokens);
-    if( which )
-    {
-        return {
-            'token'     : which,
-            'remainder' : stringafter(bigstring, which)
-        };
-    }
-    if(errstr)
-    {
-        console.log(errstr);
-    }
-    return false;
 }
 
 unary_fns = {
@@ -304,7 +263,7 @@ console.log("<<FIXME>> NOT HANDLED YET");
         if( params.second_prod )
         {
             v = param1_io.remainder;
-            if( v[0] !== puncts_str.COMMA )
+            if( v[0].token !== puncts_str.COMMA )
             {
                 console.log('comma required between binary function parameters');
                 return false;
@@ -427,14 +386,27 @@ console.log("<<FIXME>> NOT HANDLED YET");
         'prefixes' : function get_p_number_prefixes(){return p_number_cases;},
         'parse'    : function p_number_parse(v, io) {
             console.log("number:", v);
-            io.value = parseFloat(v[0].tag);
-console.log("<<FIXME>> need to handle floats"); // DOT
-            if(isNaN(io.value))
+            var i = 0, value;
+            var negate = false;
+            if( v[i].token === 'NEG' )
+            {
+                i++;
+                negate = true;
+            }
+            if( (v.length >= 3+i) && (v[i+1].token === 'DOT') && (v[i+1].token === 'DIGITS') )
+            {
+                io.value = parseFloat(v[i].tag + '.' + v[i+2].tag);
+                io.remainder = v.slice(i+3);
+            } else {
+                io.value = parseFloat(v[i].tag);
+                io.remainder = v.slice(i+1);
+            }
+            if( isNaN(io.value) )
             {
                 console.log("number could not be parsed");
                 return false;
             }
-            io.remainder = v.slice(1);
+            io.value = negate ? -io.value : io.value;
             return true;
         },
     },
@@ -442,71 +414,36 @@ console.log("<<FIXME>> need to handle floats"); // DOT
         'prefixes' : function get_p_string_prefixes(){return ['STRING'];},
         'parse'    : function p_string_parse(v, io) {
             console.log("string:", v);
-
-            var chars = v.split('');
-            var substr = [];
-            for(var i = 0; i < chars.length; i++)
+            if(v[0].token !== 'STRING')
             {
-                var c = chars[i];
-                if( i === 0 )
-                {
-                    if( c === "'" ) // as it should be
-                    {
-                        continue;
-                    }
-                    console.log("string must start with single quote");
-                    return false;
-                }
-                if( c === "'" ) // end of string
-                {
-                    io.value = substr.join('');
-                    var rem = [];
-                    for(var j = i+1; j < chars.length; j++)
-                    {
-                        rem.push(chars[j]);
-                    }
-                    io.remainder = rem.join('');
-                    console.log(io);
-                    return true;
-                }
-                if( c === bslash ) // escape!
-                {
-                    i++;
-                    c = chars[i];
-                    if( [bslash, quote].indexOf(c) === -1 )
-                    {
-                        console.log("backslash in a string must precede backslash or single quote");
-                        return false;
-                    }
-                    substr.push(c);
-                    continue;
-                }
-                substr.push(c);
+                console.log("string must be string.");
+                return false;
             }
-            console.log("unterminated string");
-            return false;
+            io.value = v[0].tag;
+            io.remainder = v.slice(1);
+            return true;
         },
     },
     'p_bool' : {
         'cases'    : p_bool_cases = ['BOOL'],
         'prefixes' : function get_p_bool_prefixes(){return p_bool_cases;},
         'parse'    : function p_bool_parse(v, io) {
-            var truth;
             console.log("bool:", v);
-            truth = startswithany(v, p_bool_cases[true]);
-            if( truth )
+            if( v[0].token !== 'BOOL' )
+            {
+                console.log("bool must be bool.");
+                return false;
+            }
+            var tag = v[0].tag.toLowerCase();
+            io.remainder = v.slice(1);
+            if( tag === 'true' )
             {
                 io.value = true;
-                io.remainder = stringafter(v, truth);
-                console.log(io);
                 return true;
             }
-            truth = startswithany(v, p_bool_cases[false]);
-            if( truth )
+            if( tag === 'false' )
             {
                 io.value = false;
-                io.remainder = stringafter(v, truth);
-                console.log(io);
                 return true;
             }
             console.log("bool must be true or false");
@@ -517,16 +454,15 @@ console.log("<<FIXME>> need to handle floats"); // DOT
         'prefixes' : function get_p_null_prefixes(){return ['NULL'];},
         'parse'    : function p_null_parse(v, io) {
             console.log("null:", v);
-            var n = startswithany(v, ['null']);
-            if( n )
+            if( v[0].token !== 'NULL' )
             {
-                io.value = null;
-                io.remainder = stringafter(v, n);
-                console.log(io);
-                return true;
+                console.log("null must be null");
+                return false;
             }
-            console.log("null must be null");
-            return false;
+            io.value = null;
+            io.remainder = v.splice(1);
+            console.log(io);
+            return true;
         },
     },
     'p_path_helper' : p_path_helper = function p_path_helper(v, io, parseparams){
@@ -544,7 +480,7 @@ console.log("<<FIXME>> need to handle floats"); // DOT
 
         // check for subpath and parse if present
         var prod = parseparams.prod;
-        var j = prod.prefixes().indexOf(v[1]);
+        var j = prod.prefixes().indexOf(v[1].token);
         if( j > -1 )
         {
             var path_io = {'initial':prefix};
@@ -611,7 +547,9 @@ console.log("<<FIXME>> need to handle floats"); // DOT
                     continue;
                 }
 
-                if( v[1] !== puncts_str.LPAREN )
+console.log("v:", v);
+
+                if( v[1].token !== puncts_str.LPAREN )
                 {
                     console.log("left paren expected to start function call params");
                     return false;
@@ -627,7 +565,7 @@ console.log("<<FIXME>> need to handle floats"); // DOT
                 console.log("params_io:", params_io);
                 v = params_io.remainder;
 
-                if( v[0] !== puncts_str.RPAREN )
+                if( v[0].token !== puncts_str.RPAREN )
                 {
                     console.log("right paren expected to finish function call params");
                     return false;
@@ -676,7 +614,6 @@ console.log("<<FIXME>> need to handle floats"); // DOT
                     return success;
                 }
             }
-console.log("<<FIXME>> need to handle negation"); // NEG
             console.log("scalar must be number, string, bool, null, scalar path, or function call");
             return false;
         },
@@ -687,7 +624,7 @@ console.log("<<FIXME>> need to handle negation"); // NEG
         'parse'    : function p_formula_parse(v, io) {
             console.log("formula:", v);
 
-            if( v[0] !== puncts_str.EQUALS )
+            if( v[0].token !== puncts_str.EQUALS )
             {
                 console.log("formula must start with " + puncts_str.EQUALS);
                 return false;
@@ -711,6 +648,11 @@ console.log("<<FIXME>> need to handle negation"); // NEG
 function parse_formula(formula, io)
 {
     var tokenstream = lex(formula);
+    console.log(tokenstream);
+    if( tokenstream === false )
+    {
+        return false;
+    }
     var formula_io = {};
     var success = productions.p_formula.parse(tokenstream, formula_io);
     io.value = formula_io.value;
