@@ -1,35 +1,38 @@
 var quote = "'";
 var bslash = "\\";
 formula_candidates = [
-    '=sum(root)',
-    '=sum(root.members[*])',
-    '=sum(3)',
-    '=add(3)',
-    '=add(3, 4)',
-    '=neg(3)',
-    '=count(3)',
-    '=sum(3',
-    '=sum',
-    '=sum(3)q',
-    '=add(37, this.parent.elements[5])',
-    '=this.parent',
-    '=this.pa-rent',
-    '=count(7,this.parent.members[*])',
-    '=this.parent.elements[*]',
-    'sum(3)',
-    '=57',
-    '=57q',
-    '=-23',
-    '=1.57',
-    '=null',
-    "='hello world'",
-    "='hello world',",
-    "='hello world'q",
-    "='hello w"+bslash+quote+"orld!"+bslash+bslash+"!!'",
-    "='hello world!!!"+bslash+"'",
-    '=true',
-    '=false',
-    '=trueq',
+    // '=sum(root)',
+    '=add(this.parent.member[mikey].element[27].parent, 22)',
+    // '=sum(root.members[*])',
+    // '=add(root.members[*], 4)',
+    // '=sum(3)',
+    // '=add(3)',
+    // '=add(3, 4)',
+    // '=add(3, add(2, 2))',
+    // '=neg(3)',
+    // '=count(3)',
+    // '=sum(3',
+    // '=sum',
+    // '=sum(3)q',
+    // '=add(37, this.parent.elements[5])',
+    // '=this.parent',
+    // '=this.pa-rent',
+    // '=count(7,this.parent.members[*])',
+    // '=this.parent.elements[*]',
+    // 'sum(3)',
+    // '=57',
+    // '=57q',
+    // '=-23',
+    // '=1.57',
+    // '=null',
+    // "='hello world'",
+    // "='hello world',",
+    // "='hello world'q",
+    // "='hello w"+bslash+quote+"orld!"+bslash+bslash+"!!'",
+    // "='hello world!!!"+bslash+"'",
+    // '=true',
+    // '=false',
+    // '=trueq',
 ];
 
 
@@ -63,7 +66,7 @@ var reserveds = {
     'MIXED'     : ['count'],
     'BOOL'      : ['true', 'false'],
     'UNARY'     : ['neg', 'abs', 'not'],
-    'SUBPATH'   : ['elements', 'members', 'parent'],
+    'SUBPATH'   : ['elements', 'members', 'parent', 'element', 'member'],
     'AGGREGATE' : ['sum', 'prod', 'min', 'max', 'mean'],
     'BINARY'    : ['add', 'sub', 'mul', 'div', 'mod', 'and', 'or'],
 };
@@ -199,6 +202,27 @@ function lex(str)
     return tokenstream;
 }
 
+function scalarvaluegetter(home_node, root_node, path_elements)
+{
+    console.log("getting scalar from path:\n", path_elements);
+    return 87;
+}
+function tensorvaluesgetter(home_node, root_node, path_elements)
+{
+    console.log("getting tensor from path:\n", path_elements);
+    return [87, 23, -5];
+}
+
+function asserttoken(v, i, tok, err)
+{
+    if( !v[i] || v[i].token !== tok )
+    {
+        console.log(err);
+        return false;
+    }
+    return true;
+}
+
 unary_fns = {
     'abs' : function u_abs(p) { return abs(p); },
     'neg' : function u_neg(p) { return -p; },
@@ -230,28 +254,93 @@ mixed_fns = {
 };
 
 productions = {
+    'p_subpath_helper' : p_subpath_helper = function p_subpath_helper(v, io, params){
+        console.log(params.label);
+
+        var path = [];
+        var remainder = v;
+
+        var succes = true;
+
+        if(!asserttoken(v, 0, puncts_str.DOT, 'subpath should start with dot')) return false;
+        if(!asserttoken(v, 1, 'SUBPATH', params.subpath_error)) return false;
+
+        var subpath_type = v[1].tag.toLowerCase();
+
+        if( subpath_type === 'parent' )
+        {
+            path.push({'type':'PARENT', 'selector':null});
+            remainder = v.slice(2);
+        }
+
+        if( subpath_type === params.subpath_type.m || subpath_type === params.subpath_type.e )
+        {
+            if(!asserttoken(v, 2, puncts_str.LBRACK, "left bracket expected to start selector")) return false;
+            if( subpath_type === params.subpath_type.m )
+            {
+                if(!asserttoken(v, 3, 'LABEL', params.label_error)) return false;
+            }
+            if( subpath_type === params.subpath_type.e )
+            {
+                if(!asserttoken(v, 3, 'DIGITS', params.index_error)) return false;
+            }
+            if(!asserttoken(v, 4, puncts_str.RBRACK, "right bracket expected to finish selector")) return false;
+
+            path.push({'type':subpath_type.toUpperCase(), 'selector':v[3].tag});
+            remainder = v.slice(5);
+        }
+
+        success = true;
+        var prod = params.prod; // p_scalar_subpath or p_tensor_subpath both yield puncts_str.DOT
+        var i = prod.prefixes().indexOf(remainder[0].token); // if "DOT" is next...
+        if( i > -1 )
+        {
+            var path_io = {};
+            success = prod.parse(remainder, path_io);
+
+            path = path.concat(path_io.path);
+            remainder = path_io.remainder;
+        }
+
+        io.path = path;
+        io.remainder = remainder;
+        // console.log(io);
+        return success;
+    },
     'p_scalar_subpath' : {
         'prefixes' : function get_p_scalar_subpath_prefixes(){return [puncts_str.DOT];},
         'parse'    : function p_scalar_subpath_parse(v, io) {
-            console.log("scalar_subpath:", v);
-console.log("<<FIXME>> NOT HANDLED YET");
-            io.remainder = v;
-            return true;
+            params = {
+                'label'         : 'scalar_subpath:',
+                'subpath_types' : {'m':'member', 'e':'element'},
+                'allow_star'    : false,
+                'subpath_error' : 'subpath should start with subpath type (.member, .element, .parent)',
+                'label_error'   : 'label expected as key',
+                'index_error'   : 'digits expected as index',
+                'subprod'       : productions.p_scalar_subpath,
+            };
+            return p_subpath_helper(v, io, params);
         },
     },
     'p_tensor_subpath' : {
         'prefixes' : function get_p_tensor_subpath_prefixes(){return [puncts_str.DOT];},
         'parse'    : function p_tensor_subpath_parse(v, io) {
-            console.log("tensor_subpath:", v);
-console.log("<<FIXME>> NOT HANDLED YET");
-            io.remainder = v;
-            return true;
+            params = {
+                'label'         : 'tensor_subpath:',
+                'subpath_types' : {'m':'members', 'e':'elements'},
+                'allow_star'    : true,
+                'subpath_error' : 'subpath should start with subpath type (.members, .elements, .parent)',
+                'label_error'   : 'label or * expected as key',
+                'index_error'   : 'digits or * expected as index',
+                'subprod'       : productions.p_tensor_subpath,
+            };
+            return p_subpath_helper(v, io, params);
         },
     },
     'p_params_helper' : p_params_helper = function p_params_helper(v, io, params){
         var comma = ',';
         var success;
-        console.log(params.label, v);
+        console.log(params.label);//, v);
 
         var param1_io = {};
         success = params.first_prod.parse(v, param1_io);
@@ -263,11 +352,7 @@ console.log("<<FIXME>> NOT HANDLED YET");
         if( params.second_prod )
         {
             v = param1_io.remainder;
-            if( v[0].token !== puncts_str.COMMA )
-            {
-                console.log('comma required between binary function parameters');
-                return false;
-            }
+            if(!asserttoken(v, 0, puncts_str.COMMA, "comma required between binary function parameters")) return false;
 
             var param2_io = {};
             success = params.second_prod.parse(v.slice(1), param2_io);
@@ -278,10 +363,12 @@ console.log("<<FIXME>> NOT HANDLED YET");
 
             io.value = { 'param1' : param1_io.value, 'param2' : param2_io.value};
             io.remainder = param2_io.remainder;
+            // console.log(io);
             return true;
         } else {
             io.value = { 'param1' : param1_io.value };
             io.remainder = param1_io.remainder;
+            // console.log(io);
             return true;
         }
     },
@@ -378,14 +465,14 @@ console.log("<<FIXME>> NOT HANDLED YET");
                 console.log("can't apply function '" + fname + "' to param:", p);
                 return undefined;
             }
-            return aggregate_fns[fname](params.value.param);
+            return aggregate_fns[fname](p);
         }
     },
     'p_number' : {
         'cases'    : p_number_cases = ['DIGITS', 'NEG'],
         'prefixes' : function get_p_number_prefixes(){return p_number_cases;},
         'parse'    : function p_number_parse(v, io) {
-            console.log("number:", v);
+            console.log("number:");//, v);
             var i = 0, value;
             var negate = false;
             if( v[i].token === 'NEG' )
@@ -407,20 +494,22 @@ console.log("<<FIXME>> NOT HANDLED YET");
                 return false;
             }
             io.value = negate ? -io.value : io.value;
+            // console.log(io);
             return true;
         },
     },
     'p_string' : {
         'prefixes' : function get_p_string_prefixes(){return ['STRING'];},
         'parse'    : function p_string_parse(v, io) {
-            console.log("string:", v);
-            if(v[0].token !== 'STRING')
+            console.log("string:");//, v);
+            if(v[0] && v[0].token !== 'STRING')
             {
                 console.log("string must be string.");
                 return false;
             }
             io.value = v[0].tag;
             io.remainder = v.slice(1);
+            // console.log(io);
             return true;
         },
     },
@@ -428,12 +517,9 @@ console.log("<<FIXME>> NOT HANDLED YET");
         'cases'    : p_bool_cases = ['BOOL'],
         'prefixes' : function get_p_bool_prefixes(){return p_bool_cases;},
         'parse'    : function p_bool_parse(v, io) {
-            console.log("bool:", v);
-            if( v[0].token !== 'BOOL' )
-            {
-                console.log("bool must be bool.");
-                return false;
-            }
+            console.log("bool:");//, v);
+            if(!asserttoken(v, 0, 'BOOL', "bool must be bool.")) return false;
+
             var tag = v[0].tag.toLowerCase();
             io.remainder = v.slice(1);
             if( tag === 'true' )
@@ -453,20 +539,20 @@ console.log("<<FIXME>> NOT HANDLED YET");
     'p_null' : {
         'prefixes' : function get_p_null_prefixes(){return ['NULL'];},
         'parse'    : function p_null_parse(v, io) {
-            console.log("null:", v);
-            if( v[0].token !== 'NULL' )
+            console.log("null:");//, v);
+            if( !v[0] || v[0].token !== 'NULL' )
             {
                 console.log("null must be null");
                 return false;
             }
             io.value = null;
             io.remainder = v.splice(1);
-            console.log(io);
+            // console.log(io);
             return true;
         },
     },
     'p_path_helper' : p_path_helper = function p_path_helper(v, io, parseparams){
-        console.log(parseparams.label, v);
+        console.log(parseparams.label);//, v);
 
         var i = parseparams.prefixes.indexOf(v[0].token);
         if( i === -1 )
@@ -476,25 +562,31 @@ console.log("<<FIXME>> NOT HANDLED YET");
         }
 
         var prefix = parseparams.prefixes[i];
-        console.log("starting element:", prefix);
+
+        var path = [ {'type':prefix, 'selector':null} ];
+        var success = true;
 
         // check for subpath and parse if present
-        var prod = parseparams.prod;
+        var remainder = v.slice(1);
+
+        var prod = parseparams.prod; // p_scalar_subpath or p_tensor_path_prefixes both yield puncts_str.DOT
         var j = prod.prefixes().indexOf(v[1].token);
         if( j > -1 )
         {
-            var path_io = {'initial':prefix};
-            var success = prod.parse(v.slice(2), path_io);
-            io.value     = path_io.value;
+            var path_io = {};
+            success = prod.parse(remainder, path_io);
+
+            path = path.concat(path_io.path);
             io.remainder = path_io.remainder;
-            console.log("subpath io:", io);
-            return success;
         } else {
-            io.value = "root";
-            io.remainder = v.slice(1);
-            console.log("fullpath io:", io);
-            return true;
+            io.remainder = remainder;
         }
+
+        io.value = parseparams.getter(null, null, path);
+        io.remainder = io.remainder;
+
+        // console.log(io);
+        return success;
     },
     'p_scalar_path' : {
         'cases'    : p_scalar_path_prefixes = ['ROOT', 'THIS'],
@@ -505,6 +597,7 @@ console.log("<<FIXME>> NOT HANDLED YET");
                 'prefixes' : p_scalar_path_prefixes,
                 'error1'   : 'scalar path must start with root or this',
                 'prod'     : productions.p_scalar_subpath,
+                'getter'   : scalarvaluegetter,
             });
         },
     },
@@ -517,6 +610,7 @@ console.log("<<FIXME>> NOT HANDLED YET");
                 'prefixes' : p_tensor_path_prefixes,
                 'error1'   : 'tensor path must start with root or this',
                 'prod'     : productions.p_tensor_subpath,
+                'getter'   : tensorvaluesgetter,
             });
         },
     },
@@ -534,7 +628,7 @@ console.log("<<FIXME>> NOT HANDLED YET");
         },
         'parse'    : function p_function_call_parse(v, io) {
             var left = '(', right = ')';
-            console.log("function_call:", v);
+            console.log("function_call:");//, v);
             for(var i = 0; i < p_function_call_cases.length; i++)
             {
                 var f_case = p_function_call_cases[i];
@@ -547,9 +641,7 @@ console.log("<<FIXME>> NOT HANDLED YET");
                     continue;
                 }
 
-console.log("v:", v);
-
-                if( v[1].token !== puncts_str.LPAREN )
+                if( !v[1] || v[1].token !== puncts_str.LPAREN )
                 {
                     console.log("left paren expected to start function call params");
                     return false;
@@ -565,15 +657,17 @@ console.log("v:", v);
                 console.log("params_io:", params_io);
                 v = params_io.remainder;
 
-                if( v[0].token !== puncts_str.RPAREN )
+                if( !v[0] || v[0].token !== puncts_str.RPAREN )
                 {
                     console.log("right paren expected to finish function call params");
                     return false;
                 }
+                console.log("APPLYING");
 
                 var collection_or_value = params_io.value;
                 if( fns[fname] )
                 {
+                    console.log("FUNCTION:", fname);
                     io.value = prod.apply(fname, params_io);
                 }
                 io.remainder = v.slice(1);
@@ -582,6 +676,7 @@ console.log("v:", v);
                     return false;
                 }
 
+                // console.log(io);
                 return true;
             }
             console.log("function call must start with a function keyword");
@@ -599,7 +694,7 @@ console.log("v:", v);
             return ret;
         },
         'parse'    : function p_scalar_parse(v, io) {
-            console.log("scalar:", v);
+            console.log("scalar:");//, v);
             for(var i = 0; i < p_scalar_cases.length; i++)
             {
                 var prod_name = p_scalar_cases[i];
@@ -610,7 +705,7 @@ console.log("v:", v);
                     var success = prod.parse(v, scalar_io);
                     io.value     = scalar_io.value;
                     io.remainder = scalar_io.remainder;
-                    console.log(io);
+                    // console.log(io);
                     return success;
                 }
             }
@@ -622,9 +717,9 @@ console.log("v:", v);
         'cases'    : ['p_scalar'],
         'prefixes' : function get_p_formula_prefixes(){return [puncts_str.EQUALS];},
         'parse'    : function p_formula_parse(v, io) {
-            console.log("formula:", v);
+            console.log("formula:");//, v);
 
-            if( v[0].token !== puncts_str.EQUALS )
+            if( !v[0] || v[0].token !== puncts_str.EQUALS )
             {
                 console.log("formula must start with " + puncts_str.EQUALS);
                 return false;
@@ -639,7 +734,7 @@ console.log("v:", v);
                 console.log("didn't expect anything after formula, got:", scalar_io.remainder);
                 return false;
             }
-            console.log(io);
+            // console.log(io);
             return success;
         }
     }
