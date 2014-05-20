@@ -38,15 +38,19 @@ formula_candidates = [
     // {'text':'=false',                                                 'result':{'value':false}},
     // {'text':'=trueq',                                                 'result':{'success':false}},
     {
-        'text'   : '=sum(root.members[characters].elements[*].members[levels].elements[*].members[level])',
+        'text'   : '=sum(/<characters>[*]<levels>[*]<level>)',
         'result' : {'success':true, 'value':147.7}
     },
     {
-        'text'   : '=sum(root.members[characters].elements[1].members[levels].elements[*].members[level])',
+        'text'   : '=sum(/<characters>[1]<levels>[*]<level>)',
         'result' : {'success':true, 'value':14.7}
     },
     {
-        'text'   : '=sum(root.members[characters].elements[0].members[levels].elements[*].members[level])',
+        'text'   : '=sum(/<characters>[0]<levels>[*]<level>)',
+        'result' : {'success':true, 'value':133}
+    },
+    {
+        'text'   : '=sum(.parent<levels>[*]<level>)',
         'result' : {'success':true, 'value':133}
     },
 ];
@@ -87,11 +91,14 @@ var puncts_dict = {
     ')' : 'RPAREN',
     '[' : 'LBRACK',
     ']' : 'RBRACK',
+    '<' : 'LCHEV',
+    '>' : 'RCHEV',
     '=' : 'EQUALS',
     ',' : 'COMMA',
     '*' : 'STAR',
     '.' : 'DOT',
     '-' : 'NEG',
+    '/' : 'SLASH',
 };
 var puncts = {};
 var puncts_str = {};
@@ -109,7 +116,6 @@ var reserveds = {
     'MIXED'     : ['count'],
     'BOOL'      : ['true', 'false'],
     'UNARY'     : ['neg', 'abs', 'not'],
-    'SUBPATH'   : ['elements', 'members', 'parent', 'element', 'member'],
     'AGGREGATE' : ['sum', 'prod', 'min', 'max', 'mean'],
     'BINARY'    : ['add', 'sub', 'mul', 'div', 'mod', 'and', 'or'],
 };
@@ -252,11 +258,6 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
 function scalarvaluegetter(root_node, curr_node, path_elements)
 {
     log('path', "getting scalar from path:\n", path_elements);
-    // console.log(
-        // "ROOT", root_node,
-        // "\n",
-        // "CURR", curr_node
-    // );
     try {
         if( path_elements.length === 0 )
         {
@@ -308,16 +309,9 @@ function tensorvaluesgetter(root_node, curr_node, path_elements, indent)
         indent = indent + '   ';
     }
     log('path', indent + "getting tensor from path:\n", indent, path_elements);
-    // console.log(
-        // "ROOT", root_node,
-        // "\n",
-        // indent + "CURR", curr_node
-    // );
     try {
-        // console.log(indent + path_elements.length + " elements.");
         if( path_elements.length === 0 )
         {
-            // console.log(indent + "returning current.");
             if( curr_node instanceof Array || curr_node instanceof Object )
             {
                 log('type_error', indent + "attempted to fetch non-leaf node");
@@ -468,10 +462,10 @@ productions = {
 
         var succes = true;
 
-        if(!asserttoken(v, 0, puncts_str.DOT, 'subpath should start with dot')) return false;
+        if(!asserttokens(v, 0, [puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV], 'subpath should start with one of: < [ .')) return false;
         if(!asserttoken(v, 1, 'SUBPATH', params.subpath_error)) return false;
 
-        var subpath_type = v[1].tag.toLowerCase();
+        var subpath_type = v[0].tag.toLowerCase();
 
         if( subpath_type === 'parent' )
         {
@@ -525,7 +519,6 @@ productions = {
         'parse'    : function p_scalar_subpath_parse(v, io) {
             params = {
                 'label'         : 'scalar_subpath:',
-                'subpath_types' : {'m':'member', 'e':'element'},
                 'allow_star'    : false,
                 'subpath_error' : 'subpath should start with subpath type (.member, .element, .parent)',
                 'label_error'   : 'label expected as key',
@@ -540,7 +533,6 @@ productions = {
         'parse'    : function p_tensor_subpath_parse(v, io) {
             params = {
                 'label'         : 'tensor_subpath:',
-                'subpath_types' : {'m':'members', 'e':'elements'},
                 'allow_star'    : true,
                 'subpath_error' : 'subpath should start with subpath type (.members, .elements, .parent)',
                 'label_error'   : 'label or * expected as key',
@@ -821,26 +813,26 @@ productions = {
         return false;
     },
     'p_scalar_path' : {
-        'cases'    : p_scalar_path_prefixes = ['ROOT', 'THIS'],
+        'cases'    : p_scalar_path_prefixes = [puncts_str.SLASH, puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
         'prefixes' : function get_p_scalar_path_prefixes(){return p_scalar_path_prefixes;},
         'parse'    : function p_scalar_path_parse(v, io) {
             return p_path_helper(v, io, {
                 'label'    : "scalar path:",
                 'prefixes' : p_scalar_path_prefixes,
-                'error1'   : 'scalar path must start with root or this',
+                'error1'   : 'scalar path must start with one of: [ < . /',
                 'prod'     : productions.p_scalar_subpath,
                 'getter'   : scalarvaluegetter,
             });
         },
     },
     'p_tensor_path' : {
-        'cases'    : p_tensor_path_prefixes = ['ROOT', 'THIS'],
+        'cases'    : p_tensor_path_prefixes = [puncts_str.SLASH, puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
         'prefixes' : function get_p_tensor_path_prefixes(){return p_tensor_path_prefixes;},
         'parse'    : function p_tensor_path_parse(v, io) {
             return p_path_helper(v, io, {
                 'label'    : "tensor path:",
                 'prefixes' : p_tensor_path_prefixes,
-                'error1'   : 'tensor path must start with root or this',
+                'error1'   : 'tensor path must start with one of: [ < . /',
                 'prod'     : productions.p_tensor_subpath,
                 'getter'   : tensorvaluesgetter,
             });

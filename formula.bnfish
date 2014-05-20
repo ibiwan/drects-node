@@ -47,13 +47,12 @@
                   *
 {scalar_index}:   {nonneg}
 {scalar_key}:     {string}
-{scalar_path}:    {starter} [{scalar_subpath}]
-{tensor_path}:    {starter} [{tensor_subpath}]
-{starter}:        root
-                  this
-{scalar_subpath}: .element [ {scalar_index} ] [{scalar_subpath}]
-                  .member  [ {scalar_key}   ] [{scalar_subpath}]
-                  .parent                     [{scalar_subpath}]
-{tensor_subpath}: .elements [ {index} ] [{tensor_subpath}]
-                  .members  [ {key}   ] [{tensor_subpath}]
-                  .parent               [{tensor_subpath}]
+{scalar_path}:    [{starter}] [{scalar_subpath}]
+{tensor_path}:    [{starter}] [{tensor_subpath}]
+{starter}:        /
+{scalar_subpath}: [ {scalar_index} ] [{scalar_subpath}]
+                  < {scalar_key}   > [{scalar_subpath}]
+                  .parent            [{scalar_subpath}]
+{tensor_subpath}: [ {index} ] [{tensor_subpath}]
+                  < {key}   > [{tensor_subpath}]
+                  .parent     [{tensor_subpath}]
