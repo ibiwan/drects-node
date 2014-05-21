@@ -1,197 +1,6 @@
-var quote = "'";
-var bslash = "\\";
-
-var out = {
-    'log_type'    : true,
-    'padding'     : true,
-    'formula'     : true,
-    // 'parse'       : true,
-    'parse_error' : true,
-    // 'lex'         : true,
-    'lex_error'   : true,
-    // 'debug'       : true,
-    // 'path'        : true,
-    'path_error'  : true,
-    'type_error'  : true,
-    'testing'     : true,
-    // 'apply'       : true,
-};
-function log(type)
-{
-    var values = Array.prototype.slice.call(arguments, 1);
-    if( out[type] )
-    {
-        if(out.log_type && type !== 'padding')
-        {
-            values.unshift(type.toUpperCase() + ':');
-        }
-        console.log.apply(this, values);
-    }
-}
-
-var puncts_dict = {
-    '(' : 'LPAREN',
-    ')' : 'RPAREN',
-    '[' : 'LBRACK',
-    ']' : 'RBRACK',
-    '<' : 'LCHEV',
-    '>' : 'RCHEV',
-    '=' : 'EQUALS',
-    ',' : 'COMMA',
-    '*' : 'STAR',
-    '.' : 'DOT',
-    '-' : 'NEG',
-    '/' : 'SLASH',
-};
-var puncts = {};
-var puncts_str = {};
-for(var key in puncts_dict)
-{
-    var str = puncts_dict[key];
-    puncts[str] = key;
-    puncts_str[str] = str;
-}
-
-var reserveds = {
-    'NULL'      : ['null'],
-    'PARENT'    : ['parent'],
-    'MIXED'     : ['count'],
-    'BOOL'      : ['true', 'false'],
-    'UNARY'     : ['neg', 'abs', 'not'],
-    'AGGREGATE' : ['sum', 'prod', 'min', 'max', 'mean'],
-    'BINARY'    : ['add', 'sub', 'mul', 'div', 'mod', 'and', 'or'],
-};
-var taggeds = [
-    'STRING',
-    'DIGITS',
-    'LABEL',
-];
-function lexstring(haystack)
-{
-    var chars = haystack.split('');
-    var substr = [];
-    for(var i = 0; i < chars.length; i++)
-    {
-        var c = chars[i];
-        if( i === 0 )
-        {
-            if( c === "'" ) // as it should be
-            {
-                continue;
-            }
-            log('lex_error', "string must start with single quote");
-            return false;
-        }
-        if( c === bslash ) // escape!
-        {
-            i++;
-            c = chars[i];
-            if( [bslash, quote].indexOf(c) === -1 )
-            {
-                log('lex_error', "backslash in a string must precede backslash or single quote");
-                return false;
-            }
-            substr.push(c);
-            continue;
-        }
-        if( c === "'" ) // end of string
-        {
-            var ret = substr.join('');
-            return {'string':substr.join(''), 'end_index':i};
-        }
-        substr.push(c);
-    }
-    log('lex_error', "unterminated string");
-    return false;
-}
-function lexdigits(haystack)
-{
-    var chars = haystack.split('');
-    var digits = [];
-    for(var i = 0; i < chars.length; i++)
-    {
-        var c = chars[i];
-        if( c >= '0' && c <= '9' )
-        {
-            digits.push(c);
-            continue;
-        }
-        break;
-    }
-    return {'digits':digits.join(''), 'end_index':i};
-}
-function lexlabel(haystack)
-{
-    var chars = haystack.split('');
-    var label = [];
-    for(var i = 0; i < chars.length; i++)
-    {
-        var c = chars[i];
-        if( (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (['-','_'].indexOf(c) > -1) )
-        {
-            label.push(c);
-            continue;
-        }
-        break;
-    }
-    return {'label':label.join(''), 'end_index':i};
-}
-function lex(str)
-{
-    var tokenstream = [];
-
-    for(var i = 0; i < str.length; i++)
-    {
-        var c = str.substr(i, 1);
-
-        if( c === "'" )
-        {
-            var ls = lexstring(str.substr(i));
-            if( ls === false )
-            {
-                return false;
-            }
-            i += ls.end_index;
-            tokenstream.push({'token':'STRING', 'tag':ls.string});
-            continue;
-        }
-        if( p = puncts_dict[c] )
-        {
-            tokenstream.push({'token':p, 'tag':'(' + p + ')'});
-            continue;
-        }
-        if( c >= '0' && c <= '9' )
-        {
-            var ld = lexdigits(str.substr(i));
-            i += ld.end_index - 1;
-            tokenstream.push({'token':'DIGITS', 'tag':ld.digits});
-            continue;
-        }
-        if( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) )
-        {
-            var ll = lexlabel(str.substr(i));
-            i += ll.end_index - 1;
-            var found = false;
-            for( var key in reserveds )
-            {
-                var candidates = reserveds[key];
-                if( candidates.indexOf(ll.label) > -1 )
-                {
-                    tokenstream.push({'token':key, 'tag':ll.label});
-                    found = true;
-                    continue;
-                }
-            }
-            if( found )
-            {
-                continue;
-            }
-            tokenstream.push({'token':'LABEL', 'tag':ll.label});
-            continue;
-        }
-    }
-    return tokenstream;
-}
+var lex = require('./lexer');
+var functions = require('./functions').functions;
+var log = require('./log').log;
 
 function helpervaluegetter(root_node, curr_node, path_elements, params)
 {
@@ -229,7 +38,6 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
                         }
                         for(var m in curr_node)
                         {
-                            // console.log("KEY:", m);
                             var members = tensorvaluesgetter(root_node, curr_node[m], subpath);
                             if( !members.success )
                             {
@@ -247,7 +55,6 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
                         }
                         for(var i = 0; i < curr_node.length; i++)
                         {
-                            // console.log("INDEX:", i);
                             var elements = tensorvaluesgetter(root_node, curr_node[i], subpath);
                             if( !elements.success )
                             {
@@ -325,49 +132,6 @@ function asserttokens(v, i, toks, err)
     log('parse_error', err);
     return false;
 }
-
-unary_fns = {
-    'abs' : function u_abs(p) { return abs(p); },
-    'neg' : function u_neg(p) { return -p; },
-    'not' : function u_not(p) { return !p; },
-};
-binary_fns = {
-    'add' : function b_add(p1, p2) { return p1 + p2; },
-};
-aggregate_fns = {
-    'sum' : function a_sum(a){
-        var sum = 0;
-        for(var i = 0; i < a.length; i++)
-        {
-            sum += a[i];
-        }
-        return sum;
-    },
-    'max' : function a_max(a){
-        log('apply', "taking max of", a);
-        var max = -Infinity;
-        for( var i = 0; i < a.length; i++)
-        {
-            log('apply', 'a[i]', a[i]);
-            if( a[i] > max )
-            {
-                max = a[i];
-            }
-            return max;
-        }
-    }
-};
-mixed_fns = {
-     // need "find" but that's tensor-return, not scalar
-     'count' : function m_count(target, a){
-        var count = 0;
-        for(var i = 0; i < a.length; i++)
-        {
-            if(a[i] === target ) count += 1;
-        }
-        return count;
-    },
-};
 
 productions = {
     'p_number' : {
@@ -468,7 +232,7 @@ productions = {
         if( params.second_prod )
         {
             v = param1_io.remainder;
-            if(!asserttoken(v, 0, puncts_str.COMMA, "comma required between binary function parameters")) return false;
+            if(!asserttoken(v, 0, lex.punct.COMMA, "comma required between binary function parameters")) return false;
 
             var param2_io = {'context':io.context};
             success = params.second_prod.parse(v.slice(1), param2_io);
@@ -489,7 +253,7 @@ productions = {
         }
     },
     'p_unary_params' : {
-        'prefixes' : function get_p_unary_params_prefixes(){return [puncts_str.DOT];},
+        'prefixes' : function get_p_unary_params_prefixes(){return [lex.punct.DOT];},
         'parse'    : function p_unary_params_parse(v, io) {
             return p_params_helper(v, io, {
                 'label':'unary_params:',
@@ -527,7 +291,7 @@ productions = {
         },
     },
     'p_unary' : {
-        'functions' : unary_fns,
+        'functions' : functions.unary,
         'prefixes' : function get_p_unary_prefixes(){return ['UNARY'];},
         'params'   : function get_p_unary_params(){return 'p_unary_params';},
         'apply'    : function p_unary_parse(fname, params){
@@ -539,11 +303,11 @@ productions = {
                 log('type_error', "can't apply function '" + fname + "' to param: ", p);
                 return undefined;
             }
-            return unary_fns[fname](p);
+            return functions.unary[fname](p);
         }
     },
     'p_binary' : {
-        'functions' : binary_fns,
+        'functions' : functions.binary,
         'prefixes' : function get_p_binary_prefixes(){return ['BINARY'];},
         'params'   : function get_p_binary_params(){return 'p_binary_params';},
         'apply'    : function p_binary_parse(fname, params){
@@ -556,11 +320,11 @@ productions = {
                 log('type_error', "can't apply function '" + fname + "' to params:", p1, ",", p2);
                 return undefined;
             }
-            return binary_fns[fname](p1, p2);
+            return functions.binary[fname](p1, p2);
         }
     },
     'p_mixed' : {
-        'functions' : mixed_fns,
+        'functions' : functions.mixed,
         'prefixes' : function get_p_mixed_prefixes(){return ['MIXED'];},
         'params'   : function get_p_mixed_params(){return 'p_mixed_params';},
         'apply'    : function p_mixed_parse(fname, params){
@@ -573,24 +337,22 @@ productions = {
                 log('type_error', "can't apply function '" + fname + "' to params:", p1, ",", p2);
                 return undefined;
             }
-            return mixed_fns[fname](p1, p2);
+            return functions.mixed[fname](p1, p2);
         }
     },
     'p_aggregate' : {
-        'functions' : aggregate_fns,
+        'functions' : functions.aggregate,
         'prefixes' : function get_p_aggregate_prefixes(){return ['AGGREGATE'];},
         'params'   : function get_p_aggregate_params(){return 'p_aggregate_params';},
         'apply'    : function p_aggregate_parse(fname, params){
             log('apply', 'p_aggregate:');
             var p = params.value.param1;
-            // log('path', params.context);
-            // console.log(p);
             if( p === undefined || !Array.isArray(p) )
             {
                 log('type_error', "can't apply function '" + fname + "' to param:", p);
                 return undefined;
             }
-            return aggregate_fns[fname](p);
+            return functions.aggregate[fname](p);
         }
     },
     'p_subpath_helper' : p_subpath_helper = function p_subpath_helper(v, io, params){
@@ -604,29 +366,29 @@ productions = {
         var allow = ( params.allow_star ) ? ['STAR'] : [];
         switch( v[0].token )
         {
-            case puncts_str.DOT:
+            case lex.punct.DOT:
             log('parse', "v1:", v[1]);
                 if(!asserttoken(v, 1, 'PARENT', 'DOT must be followed by "parent"')) return false;
                 path.push({'type':'PARENT', 'selector':null});
                 remainder = v.slice(2);
                 break;
-            case puncts_str.LBRACK: // brackets for index
+            case lex.punct.LBRACK: // brackets for index
                 allow.push('DIGITS');
                 if(!asserttokens(v, 1, allow, params.index_error))
                 {
                     return false;
                 }
-                if(!asserttoken(v, 2, puncts_str.RBRACK, 'right bracket expected to finish index')) return false;
+                if(!asserttoken(v, 2, lex.punct.RBRACK, 'right bracket expected to finish index')) return false;
                 path.push({'type':'ELEMENT', 'selector':v[1].tag}); // null for star
                 remainder = v.slice(3);
                 break;
-            case puncts_str.LCHEV:  // chevrons for key
+            case lex.punct.LCHEV:  // chevrons for key
                 allow.push('LABEL');
                 if(!asserttokens(v, 1, allow, params.label_error))
                 {
                     return false;
                 }
-                if(!asserttoken(v, 2, puncts_str.RCHEV, 'right chevron expected to finish key')) return false;
+                if(!asserttoken(v, 2, lex.punct.RCHEV, 'right chevron expected to finish key')) return false;
                 path.push({'type':'MEMBER', 'selector':v[1].tag}); // null for star
                 remainder = v.slice(3);
                 break;
@@ -657,7 +419,7 @@ productions = {
         return success;
     },
     'p_scalar_subpath' : {
-        'cases'    : p_scalar_subpath_prefixes = [puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
+        'cases'    : p_scalar_subpath_prefixes = [lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_scalar_subpath_prefixes(){return p_scalar_subpath_prefixes;},
         'parse'    : function p_scalar_subpath_parse(v, io) {
             params = {
@@ -671,7 +433,7 @@ productions = {
         }, // aonsfokasnofnasd
     },
     'p_tensor_subpath' : {
-        'cases'    : p_tensor_subpath_prefixes = [puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
+        'cases'    : p_tensor_subpath_prefixes = [lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_tensor_subpath_prefixes(){return p_tensor_subpath_prefixes;},
         'parse'    : function p_tensor_subpath_parse(v, io) {
             params = {
@@ -731,7 +493,7 @@ productions = {
         return false; // aonsfokasnofnasd
     },
     'p_scalar_path' : {
-        'cases'    : p_scalar_path_prefixes = [puncts_str.SLASH, puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
+        'cases'    : p_scalar_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_scalar_path_prefixes(){return p_scalar_path_prefixes;},
         'parse'    : function p_scalar_path_parse(v, io) {
             return p_path_helper(v, io, {
@@ -744,7 +506,7 @@ productions = {
         },
     },
     'p_tensor_path' : {
-        'cases'    : p_tensor_path_prefixes = [puncts_str.SLASH, puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
+        'cases'    : p_tensor_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_tensor_path_prefixes(){return p_tensor_path_prefixes;},
         'parse'    : function p_tensor_path_parse(v, io) {
             return p_path_helper(v, io, {
@@ -769,7 +531,6 @@ productions = {
             return ret;
         },
         'parse'    : function p_function_call_parse(v, io) {
-            var left = '(', right = ')';
             log('parse', "function_call:", v[0]);
             for(var i = 0; i < p_function_call_cases.length; i++)
             {
@@ -783,7 +544,7 @@ productions = {
                     continue;
                 }
 
-                if( !v[1] || v[1].token !== puncts_str.LPAREN )
+                if( !v[1] || v[1].token !== lex.punct.LPAREN )
                 {
                     log('parse_error', "left paren expected to start function call params");
                     return false;
@@ -799,7 +560,7 @@ productions = {
                 log('debug', "params_io:", params_io);
                 v = params_io.remainder;
 
-                if( !v[0] || v[0].token !== puncts_str.RPAREN )
+                if( !v[0] || v[0].token !== lex.punct.RPAREN )
                 {
                     log('parse_error', "right paren expected to finish function call params");
                     return false;
@@ -857,13 +618,13 @@ productions = {
     },
     'p_formula' : {
         'cases'    : ['p_scalar'],
-        'prefixes' : function get_p_formula_prefixes(){return [puncts_str.EQUALS];},
+        'prefixes' : function get_p_formula_prefixes(){return [lex.punct.EQUALS];},
         'parse'    : function p_formula_parse(v, io) {
             log('parse', "formula:", v[0]);
 
-            if( !v[0] || v[0].token !== puncts_str.EQUALS )
+            if( !v[0] || v[0].token !== lex.punct.EQUALS )
             {
-                log('parse_error', "formula must start with " + puncts_str.EQUALS);
+                log('parse_error', "formula must start with " + lex.punct.EQUALS);
                 return false;
             }
 
@@ -884,7 +645,7 @@ productions = {
 
 function parse_formula(formula, io)
 {
-    var tokenstream = lex(formula);
+    var tokenstream = lex.lex(formula);
     log('lex', tokenstream);
     if( tokenstream === false )
     {
@@ -944,7 +705,7 @@ load_some_data(function(err, data){
     var i;
     var root = JSON.parse(data);
 
-    formula_candidates = [
+    var formula_candidates = [
         {
             'node'   : root,
             'text'   : '=sum(/<characters>[*]<levels>[*]<level>)',
@@ -972,10 +733,7 @@ load_some_data(function(err, data){
         },
     ];
 
-    for(i = 0; i < 10; i++)
-    {
-        log('padding');
-    }
+    for(i = 0; i < 10; i++) { log('padding'); }
 
     for(i = 0; i < formula_candidates.length; i++)
     {
