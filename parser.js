@@ -1,59 +1,5 @@
 var quote = "'";
 var bslash = "\\";
-formula_candidates = [
-    // {'text':'=sum(root)',                                             'result':{'success':false}},
-    // {'text':'=add(this.parent.member[mikey].element[27].parent, 22)', 'result':{'success':true, 'value':109}},
-    // {'text':'=sum(root.members[*])',                                  'result':{'success':true, 'value':105}},
-    // {'text':'=add(root.member[mikey], 4)',                            'result':{'success':true, 'value':91}},
-    // {'text':'=add(root.member[*], 4)',                                'result':{'success':false}},
-    // {'text':'=add(root.members[*], 4)',                               'result':{'success':false}},
-    // {'text':'=add(root.members[mikey], 4)',                           'result':{'success':false}},
-    // {'text':'=sum(3)',                                                'result':{'success':false}},
-    // {'text':'=add(3)',                                                'result':{'success':false}},
-    // {'text':'=add(3, 4)',                                             'result':{'success':true, 'value':7}},
-    // {'text':'=add(3, add(2, 2))',                                     'result':{'success':true, 'value':7}},
-    // {'text':'=neg(3)',                                                'result':{'success':true, 'value':-3}},
-    // {'text':'=count(3)',                                              'result':{'success':false}},
-    // {'text':'=sum(3',                                                 'result':{'success':false}},
-    // {'text':'=sum',                                                   'result':{'success':false}},
-    // {'text':'=sum(3)q',                                               'result':{'success':false}},
-    // {'text':'=add(37, this.parent.element[5])',                       'result':{'success':true, 'value':124}},
-    // {'text':'=add(37, this.parent.elements[5])',                      'result':{'success':false}},
-    // {'text':'=this.parent',                                           'result':{'success':true, 'value':87}},
-    // {'text':'=this.pa-rent',                                          'result':{'success':false}},
-    // {'text':'=count(23,this.parent.members[*])',                      'result':{'success':true, 'value':1}},
-    // {'text':'=this.parent.elements[*]',                               'result':{'success':false}},
-    // {'text':'sum(3)',                                                 'result':{'success':false}},
-    // {'text':'=57',                                                    'result':{'success':true, 'value':57}},
-    // {'text':'=57q',                                                   'result':{'success':false}},
-    // {'text':'=-23',                                                   'result':{'success':true, 'value':-23}},
-    // {'text':'=1.57',                                                  'result':{'success':true, 'value':1.57}},
-    // {'text':'=null',                                                  'result':{'success':true, 'value':null}},
-    // {'text':"='hello world'",                                         'result':{'success':true, 'value':'hello world'}},
-    // {'text':"='hello world',",                                        'result':{'success':false}},
-    // {'text':"='hello world'q",                                        'result':{'success':false}},
-    // {'text':"='hello w"+bslash+quote+"orld!"+bslash+bslash+"!!'",     'result':{'success':true, 'value':"hello w'orld!\\!!"}},
-    // {'text':"='hello world!!!"+bslash+"'",                            'result':{'success':false}},
-    // {'text':'=true',                                                  'result':{'success':true, 'value':true}},
-    // {'text':'=false',                                                 'result':{'value':false}},
-    // {'text':'=trueq',                                                 'result':{'success':false}},
-    {
-        'text'   : '=sum(/<characters>[*]<levels>[*]<level>)',
-        'result' : {'success':true, 'value':147.7}
-    },
-    {
-        'text'   : '=sum(/<characters>[1]<levels>[*]<level>)',
-        'result' : {'success':true, 'value':14.7}
-    },
-    {
-        'text'   : '=sum(/<characters>[0]<levels>[*]<level>)',
-        'result' : {'success':true, 'value':133}
-    },
-    {
-        'text'   : '=sum(.parent<levels>[*]<level>)',
-        'result' : {'success':true, 'value':133}
-    },
-];
 
 var out = {
     'log_type'    : true,
@@ -68,7 +14,7 @@ var out = {
     'path_error'  : true,
     'type_error'  : true,
     'testing'     : true,
-    'apply'       : true,
+    // 'apply'       : true,
 };
 function log(type)
 {
@@ -82,9 +28,6 @@ function log(type)
         console.log.apply(this, values);
     }
 }
-
-for(var i = 0; i < 10; i++)
-    log('padding');
 
 var puncts_dict = {
     '(' : 'LPAREN',
@@ -111,8 +54,7 @@ for(var key in puncts_dict)
 
 var reserveds = {
     'NULL'      : ['null'],
-    'ROOT'      : ['root'],
-    'THIS'      : ['this'],
+    'PARENT'    : ['parent'],
     'MIXED'     : ['count'],
     'BOOL'      : ['true', 'false'],
     'UNARY'     : ['neg', 'abs', 'not'],
@@ -253,11 +195,7 @@ function lex(str)
 
 function helpervaluegetter(root_node, curr_node, path_elements, params)
 {
-
-}
-function scalarvaluegetter(root_node, curr_node, path_elements)
-{
-    log('path', "getting scalar from path:\n", path_elements);
+    log('path', params.label, path_elements);
     try {
         if( path_elements.length === 0 )
         {
@@ -271,23 +209,66 @@ function scalarvaluegetter(root_node, curr_node, path_elements)
         var t = path_elements[0].type;
         var sel = path_elements[0].selector;
         var subpath = path_elements.slice(1);
+        var ret = [];
         switch(t)
         {
             case 'THIS':
-                return scalarvaluegetter(root_node, curr_node, subpath);
+                return params.recurse(root_node, curr_node, subpath);
             case 'ROOT':
-                return scalarvaluegetter(root_node, root_node, subpath);
+                return params.recurse(root_node, root_node, subpath);
             case 'MEMBER':
             case 'ELEMENT':
-                var mel = curr_node[sel];
-                if( mel === undefined )
+                if( params.allow_star && sel === '(STAR)' )
                 {
-                    log('path_error', "could not find element:", sel);
-                    return {'success':false};
+                    if(t === 'MEMBER')
+                    {
+                        if( !(curr_node instanceof Object) )
+                        {
+                            log('type_error', "attempted to get members of a non-object");
+                            return {'success':false};
+                        }
+                        for(var m in curr_node)
+                        {
+                            // console.log("KEY:", m);
+                            var members = tensorvaluesgetter(root_node, curr_node[m], subpath);
+                            if( !members.success )
+                            {
+                                return false;
+                            }
+                            ret = ret.concat(members.value);
+                        }
+                    }
+                    if(t === 'ELEMENT')
+                    {
+                        if( !(curr_node instanceof Array) )
+                        {
+                            log('type_error', "attempted to get elements of a non-array");
+                            return {'success':false};
+                        }
+                        for(var i = 0; i < curr_node.length; i++)
+                        {
+                            // console.log("INDEX:", i);
+                            var elements = tensorvaluesgetter(root_node, curr_node[i], subpath);
+                            if( !elements.success )
+                            {
+                                return false;
+                            }
+                            ret = ret.concat(elements.value);
+                        }
+                    }
+                    return {'success':true, 'value':ret};
+                } else {
+                    var mel = curr_node[sel];
+                    if( mel === undefined )
+                    {
+                        log('path_error', "could not find element:", sel);
+                        return {'success':false};
+                    }
+                    return params.recurse(root_node, mel, subpath);
                 }
-                return scalarvaluegetter(root_node, mel, subpath);
+                break; // should have already hit a "return" in all cases
             case 'PARENT':
-                return scalarvaluegetter(root_node, parent(root_node, curr_node), subpath);
+                return params.recurse(root_node, parent(root_node, curr_node), subpath);
             default:
                 log('path_error', "unknown path element type:", t);
                 return {'success':false};
@@ -300,100 +281,23 @@ function scalarvaluegetter(root_node, curr_node, path_elements)
     log('path_error', "not sure what happened, here");
     return {'success':false};
 }
-function tensorvaluesgetter(root_node, curr_node, path_elements, indent)
+function scalarvaluegetter(root_node, curr_node, path_elements)
 {
-    if( indent === undefined )
-    {
-        indent = '';
-    } else {
-        indent = indent + '   ';
-    }
-    log('path', indent + "getting tensor from path:\n", indent, path_elements);
-    try {
-        if( path_elements.length === 0 )
-        {
-            if( curr_node instanceof Array || curr_node instanceof Object )
-            {
-                log('type_error', indent + "attempted to fetch non-leaf node");
-                return {'success':false};
-            }
-            return {'success':true, 'value':[curr_node]};
-        }
-        var t = path_elements[0].type;
-        var sel = path_elements[0].selector;
-        var subpath = path_elements.slice(1);
-        var ret = [];
-        switch(t)
-        {
-            case 'THIS':
-                return tensorvaluesgetter(root_node, curr_node, subpath, indent);
-            case 'ROOT':
-                return tensorvaluesgetter(root_node, root_node, subpath, indent);
-            case 'MEMBERS':
-            case 'ELEMENTS':
-                if( sel === '(STAR)' )
-                {
-                    if(t === 'MEMBERS')
-                    {
-                        if( !(curr_node instanceof Object) )
-                        {
-                            log('type_error', indent + "attempted to get members of a non-object");
-                            return {'success':false};
-                        }
-                        for(var m in curr_node)
-                        {
-                            // console.log(indent + "KEY:", m);
-                            var members = tensorvaluesgetter(root_node, curr_node[m], subpath, indent);
-                            if( !members.success )
-                            {
-                                return false;
-                            }
-                            ret = ret.concat(members.value);
-                        }
-                    }
-                    if(t === 'ELEMENTS')
-                    {
-                        if( !(curr_node instanceof Array) )
-                        {
-                            log('type_error', indent + "attempted to get elements of a non-array");
-                            return {'success':false};
-                        }
-                        for(var i = 0; i < curr_node.length; i++)
-                        {
-                            // console.log(indent + "INDEX:", i);
-                            var elements = tensorvaluesgetter(root_node, curr_node[i], subpath, indent);
-                            if( !elements.success )
-                            {
-                                return false;
-                            }
-                            ret = ret.concat(elements.value);
-                        }
-                    }
-                    return {'success':true, 'value':ret};
-                } else {
-                    // console.log(indent + "KEYDEX:", sel);
-                    var mel = curr_node[sel];
-                    if( mel === undefined )
-                    {
-                        log('path_error', indent + "could not find element:", sel);
-                        return {'success':false};
-                    }
-                    return tensorvaluesgetter(root_node, mel, subpath, indent);
-                }
-                break;
-            case 'PARENT':
-                return tensorvaluesgetter(root_node, parent(root_node, curr_node), subpath, indent);
-            default:
-                log('path_error', indent + "unknown path element type:", t);
-                return {'success':false};
-        }
-    } catch (err) {
-        log('path_error', "could not traverse path:", path_elements);
-        return {'success':false};
-    }
-
-    log('path_error', "not sure what happened, here");
-    return {'success':false};
+    var params = {
+        'label'   : "getting scalar from path:\n",
+        'recurse' : scalarvaluegetter,
+        'allow_star' : false,
+    };
+    return helpervaluegetter(root_node, curr_node, path_elements, params);
+}
+function tensorvaluesgetter(root_node, curr_node, path_elements)
+{
+    var params = {
+        'label'   : "getting tensor from path:\n",
+        'recurse' : tensorvaluesgetter,
+        'allow_star' : true,
+    };
+    return helpervaluegetter(root_node, curr_node, path_elements, params);
 }
 
 function asserttoken(v, i, tok, err)
@@ -439,6 +343,19 @@ aggregate_fns = {
         }
         return sum;
     },
+    'max' : function a_max(a){
+        log('apply', "taking max of", a);
+        var max = -Infinity;
+        for( var i = 0; i < a.length; i++)
+        {
+            log('apply', 'a[i]', a[i]);
+            if( a[i] > max )
+            {
+                max = a[i];
+            }
+            return max;
+        }
+    }
 };
 mixed_fns = {
      // need "find" but that's tensor-return, not scalar
@@ -453,99 +370,93 @@ mixed_fns = {
 };
 
 productions = {
-    'p_subpath_helper' : p_subpath_helper = function p_subpath_helper(v, io, params){
-        log('parse', params.label);
-        log('parse', v);
-
-        var path = [];
-        var remainder = v;
-
-        var succes = true;
-
-        if(!asserttokens(v, 0, [puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV], 'subpath should start with one of: < [ .')) return false;
-        if(!asserttoken(v, 1, 'SUBPATH', params.subpath_error)) return false;
-
-        var subpath_type = v[0].tag.toLowerCase();
-
-        if( subpath_type === 'parent' )
-        {
-            path.push({'type':'PARENT', 'selector':null});
-            remainder = v.slice(2);
-        } else if( subpath_type === params.subpath_types.m || subpath_type === params.subpath_types.e ) {
-            if(!asserttoken(v, 2, puncts_str.LBRACK, "left bracket expected to start selector")) return false;
-
-            var allow = [];
-            if( subpath_type === params.subpath_types.m ) { allow.push('LABEL'); }
-            if( subpath_type === params.subpath_types.e ) { allow.push('DIGITS'); }
-            if( params.allow_star )                       { allow.push('STAR'); }
-            if(!asserttokens(v, 3, allow, params.label_error))
+    'p_number' : {
+        'cases'    : p_number_cases = ['DIGITS', 'NEG'],
+        'prefixes' : function get_p_number_prefixes(){return p_number_cases;},
+        'parse'    : function p_number_parse(v, io) {
+            log('parse', "number:", v[0]);
+            var i = 0, value;
+            var negate = false;
+            if( v[i].token === 'NEG' )
             {
+                i++;
+                negate = true;
+            }
+            if( (v.length >= 3+i) && (v[i+1].token === 'DOT') && (v[i+1].token === 'DIGITS') )
+            {
+                io.value = parseFloat(v[i].tag + '.' + v[i+2].tag);
+                io.remainder = v.slice(i+3);
+            } else {
+                io.value = parseFloat(v[i].tag);
+                io.remainder = v.slice(i+1);
+            }
+            if( isNaN(io.value) )
+            {
+                log('parse_error', "number could not be parsed");
                 return false;
             }
-
-            if(!asserttoken(v, 4, puncts_str.RBRACK, "right bracket expected to finish selector")) return false;
-
-            path.push({'type':subpath_type.toUpperCase(), 'selector':v[3].tag}); // null for star
-            remainder = v.slice(5);
-        } else {
-            log('debug', params.subpath_types);
-            log('parse_error', ".parent, ." + params.subpath_types.m + ", or ." + params.subpath_types.e + " required for subpath");
-            return false;
-        }
-
-        log('debug', "remainder:", remainder);
-
-        if(remainder.length > 0)
-        {
-            success = true;
-            var prod = params.subprod; // p_scalar_subpath or p_tensor_subpath both yield puncts_str.DOT
-            var i = prod.prefixes().indexOf(remainder[0].token); // if "DOT" is next...
-            if( i > -1 )
-            {
-                var path_io = {'context':io.context};
-                success = prod.parse(remainder, path_io);
-
-                path = path.concat(path_io.path);
-                remainder = path_io.remainder;
-            }
-        }
-
-        io.path = path;
-        io.remainder = remainder;
-        return success;
-    },
-    'p_scalar_subpath' : {
-        'prefixes' : function get_p_scalar_subpath_prefixes(){return [puncts_str.DOT];},
-        'parse'    : function p_scalar_subpath_parse(v, io) {
-            params = {
-                'label'         : 'scalar_subpath:',
-                'allow_star'    : false,
-                'subpath_error' : 'subpath should start with subpath type (.member, .element, .parent)',
-                'label_error'   : 'label expected as key',
-                'index_error'   : 'digits expected as index',
-                'subprod'       : productions.p_scalar_subpath,
-            };
-            return p_subpath_helper(v, io, params);
+            io.value = negate ? -io.value : io.value;
+            log('debug', io);
+            return true;
         },
     },
-    'p_tensor_subpath' : {
-        'prefixes' : function get_p_tensor_subpath_prefixes(){return [puncts_str.DOT];},
-        'parse'    : function p_tensor_subpath_parse(v, io) {
-            params = {
-                'label'         : 'tensor_subpath:',
-                'allow_star'    : true,
-                'subpath_error' : 'subpath should start with subpath type (.members, .elements, .parent)',
-                'label_error'   : 'label or * expected as key',
-                'index_error'   : 'digits or * expected as index',
-                'subprod'       : productions.p_tensor_subpath,
-            };
-            return p_subpath_helper(v, io, params);
+    'p_string' : {
+        'prefixes' : function get_p_string_prefixes(){return ['STRING'];},
+        'parse'    : function p_string_parse(v, io) {
+            log('parse', "string:", v[0]);
+            if(v[0] && v[0].token !== 'STRING')
+            {
+                log('parse_error', "string must be string.");
+                return false;
+            }
+            io.value = v[0].tag;
+            io.remainder = v.slice(1);
+            log('debug', io);
+            return true;
+        },
+    },
+    'p_bool' : {
+        'cases'    : p_bool_cases = ['BOOL'],
+        'prefixes' : function get_p_bool_prefixes(){return p_bool_cases;},
+        'parse'    : function p_bool_parse(v, io) {
+            log('parse', "bool:", v[0]);
+            if(!asserttoken(v, 0, 'BOOL', "bool must be bool.")) return false;
+
+            var tag = v[0].tag.toLowerCase();
+            io.remainder = v.slice(1);
+            if( tag === 'true' )
+            {
+                io.value = true;
+                return true;
+            }
+            if( tag === 'false' )
+            {
+                io.value = false;
+                return true;
+            }
+            log('parse_error', "bool must be true or false");
+            return false;
+        },
+    },
+    'p_null' : {
+        'prefixes' : function get_p_null_prefixes(){return ['NULL'];},
+        'parse'    : function p_null_parse(v, io) {
+            log('parse', "null:", v[0]);
+            if( !v[0] || v[0].token !== 'NULL' )
+            {
+                log('parse_error', "null must be null");
+                return false;
+            }
+            io.value = null;
+            io.remainder = v.splice(1);
+            log('debug', io);
+            return true;
         },
     },
     'p_params_helper' : p_params_helper = function p_params_helper(v, io, params){
         var comma = ',';
         var success;
-        log('parse', params.label, v);
+        log('parse', params.label, v[0]);
 
         var param1_io = {'context':io.context};
         success = params.first_prod.parse(v, param1_io);
@@ -682,109 +593,116 @@ productions = {
             return aggregate_fns[fname](p);
         }
     },
-    'p_number' : {
-        'cases'    : p_number_cases = ['DIGITS', 'NEG'],
-        'prefixes' : function get_p_number_prefixes(){return p_number_cases;},
-        'parse'    : function p_number_parse(v, io) {
-            log('parse', "number:", v);
-            var i = 0, value;
-            var negate = false;
-            if( v[i].token === 'NEG' )
-            {
-                i++;
-                negate = true;
-            }
-            if( (v.length >= 3+i) && (v[i+1].token === 'DOT') && (v[i+1].token === 'DIGITS') )
-            {
-                io.value = parseFloat(v[i].tag + '.' + v[i+2].tag);
-                io.remainder = v.slice(i+3);
-            } else {
-                io.value = parseFloat(v[i].tag);
-                io.remainder = v.slice(i+1);
-            }
-            if( isNaN(io.value) )
-            {
-                log('parse_error', "number could not be parsed");
-                return false;
-            }
-            io.value = negate ? -io.value : io.value;
-            log('debug', io);
-            return true;
-        },
-    },
-    'p_string' : {
-        'prefixes' : function get_p_string_prefixes(){return ['STRING'];},
-        'parse'    : function p_string_parse(v, io) {
-            log('parse', "string:", v);
-            if(v[0] && v[0].token !== 'STRING')
-            {
-                log('parse_error', "string must be string.");
-                return false;
-            }
-            io.value = v[0].tag;
-            io.remainder = v.slice(1);
-            log('debug', io);
-            return true;
-        },
-    },
-    'p_bool' : {
-        'cases'    : p_bool_cases = ['BOOL'],
-        'prefixes' : function get_p_bool_prefixes(){return p_bool_cases;},
-        'parse'    : function p_bool_parse(v, io) {
-            log('parse', "bool:", v);
-            if(!asserttoken(v, 0, 'BOOL', "bool must be bool.")) return false;
+    'p_subpath_helper' : p_subpath_helper = function p_subpath_helper(v, io, params){
+        log('parse', params.label, v[0]);
 
-            var tag = v[0].tag.toLowerCase();
-            io.remainder = v.slice(1);
-            if( tag === 'true' )
-            {
-                io.value = true;
-                return true;
-            }
-            if( tag === 'false' )
-            {
-                io.value = false;
-                return true;
-            }
-            log('parse_error', "bool must be true or false");
-            return false;
-        },
-    },
-    'p_null' : {
-        'prefixes' : function get_p_null_prefixes(){return ['NULL'];},
-        'parse'    : function p_null_parse(v, io) {
-            log('parse', "null:", v);
-            if( !v[0] || v[0].token !== 'NULL' )
-            {
-                log('parse_error', "null must be null");
-                return false;
-            }
-            io.value = null;
-            io.remainder = v.splice(1);
-            log('debug', io);
-            return true;
-        },
-    },
-    'p_path_helper' : p_path_helper = function p_path_helper(v, io, parseparams){
-        log('parse', parseparams.label, v);
+        var path = [];
+        var remainder = v;
 
-        var i = parseparams.prefixes.indexOf(v[0].token);
-        if( i === -1 )
-        {
-            log('parse_error', parseparams.error1);
-            return false;
-        }
-
-        var prefix = parseparams.prefixes[i];
-
-        var path = [ {'type':prefix, 'selector':null} ];
         var success = true;
 
-        // check for subpath and parse if present
-        var remainder = v.slice(1);
+        var allow = ( params.allow_star ) ? ['STAR'] : [];
+        switch( v[0].token )
+        {
+            case puncts_str.DOT:
+            log('parse', "v1:", v[1]);
+                if(!asserttoken(v, 1, 'PARENT', 'DOT must be followed by "parent"')) return false;
+                path.push({'type':'PARENT', 'selector':null});
+                remainder = v.slice(2);
+                break;
+            case puncts_str.LBRACK: // brackets for index
+                allow.push('DIGITS');
+                if(!asserttokens(v, 1, allow, params.index_error))
+                {
+                    return false;
+                }
+                if(!asserttoken(v, 2, puncts_str.RBRACK, 'right bracket expected to finish index')) return false;
+                path.push({'type':'ELEMENT', 'selector':v[1].tag}); // null for star
+                remainder = v.slice(3);
+                break;
+            case puncts_str.LCHEV:  // chevrons for key
+                allow.push('LABEL');
+                if(!asserttokens(v, 1, allow, params.label_error))
+                {
+                    return false;
+                }
+                if(!asserttoken(v, 2, puncts_str.RCHEV, 'right chevron expected to finish key')) return false;
+                path.push({'type':'MEMBER', 'selector':v[1].tag}); // null for star
+                remainder = v.slice(3);
+                break;
+            default:
+                log('parse_error', 'subpath should start with one of: < [ .');
+                return false;
+        }
 
-        var prod = parseparams.prod; // p_scalar_subpath or p_tensor_path_prefixes both yield puncts_str.DOT
-        var j = prod.prefixes().indexOf(v[1].token);
+        // log('debug', "remainder:", remainder);
+
+        if(remainder.length > 0)
+        {
+            success = true;
+            var prod = params.subprod;
+            var i = prod.prefixes().indexOf(remainder[0].token);
+            if( i > -1 )
+            {
+                var path_io = {'context':io.context};
+                success = prod.parse(remainder, path_io);
+
+                path = path.concat(path_io.path);
+                remainder = path_io.remainder;
+            }
+        }
+
+        io.path = path;
+        io.remainder = remainder;
+        return success;
+    },
+    'p_scalar_subpath' : {
+        'cases'    : p_scalar_subpath_prefixes = [puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
+        'prefixes' : function get_p_scalar_subpath_prefixes(){return p_scalar_subpath_prefixes;},
+        'parse'    : function p_scalar_subpath_parse(v, io) {
+            params = {
+                'label'         : 'scalar_subpath:',
+                'allow_star'    : false,
+                'label_error'   : 'label expected as key',
+                'index_error'   : 'digits expected as index',
+                'subprod'       : productions.p_scalar_subpath,
+            };
+            return p_subpath_helper(v, io, params);
+        }, // aonsfokasnofnasd
+    },
+    'p_tensor_subpath' : {
+        'cases'    : p_tensor_subpath_prefixes = [puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
+        'prefixes' : function get_p_tensor_subpath_prefixes(){return p_tensor_subpath_prefixes;},
+        'parse'    : function p_tensor_subpath_parse(v, io) {
+            params = {
+                'label'         : 'tensor_subpath:',
+                'allow_star'    : true,
+                'label_error'   : 'label or * expected as key',
+                'index_error'   : 'digits or * expected as index',
+                'subprod'       : productions.p_tensor_subpath,
+            };
+            return p_subpath_helper(v, io, params);
+        }, // aonsfokasnofnasd
+    },
+    'p_path_helper' : p_path_helper = function p_path_helper(v, io, parseparams){
+        log('parse', parseparams.label, v[0]);
+
+        var prefix, remainder;
+
+        if(v[0].token === 'SLASH')
+        {
+            prefix = 'ROOT';
+            remainder = v.slice(1);
+        } else {
+            prefix = 'THIS';
+            remainder = v;
+        }
+        var path = [ {'type':prefix, 'selector':null} ];
+
+        var success = true;
+        var prod = parseparams.prod;
+
+        var j = prod.prefixes().indexOf(remainder[0].token);
         if( j > -1 )
         {
             var path_io = {'context':io.context};
@@ -810,7 +728,7 @@ productions = {
             log('debug', io);
             return true;
         }
-        return false;
+        return false; // aonsfokasnofnasd
     },
     'p_scalar_path' : {
         'cases'    : p_scalar_path_prefixes = [puncts_str.SLASH, puncts_str.DOT, puncts_str.LBRACK, puncts_str.LCHEV],
@@ -852,7 +770,7 @@ productions = {
         },
         'parse'    : function p_function_call_parse(v, io) {
             var left = '(', right = ')';
-            log('parse', "function_call:", v);
+            log('parse', "function_call:", v[0]);
             for(var i = 0; i < p_function_call_cases.length; i++)
             {
                 var f_case = p_function_call_cases[i];
@@ -918,7 +836,7 @@ productions = {
             return ret;
         },
         'parse'    : function p_scalar_parse(v, io) {
-            log('parse', "scalar:", v);
+            log('parse', "scalar:", v[0]);
             for(var i = 0; i < p_scalar_cases.length; i++)
             {
                 var prod_name = p_scalar_cases[i];
@@ -941,7 +859,7 @@ productions = {
         'cases'    : ['p_scalar'],
         'prefixes' : function get_p_formula_prefixes(){return [puncts_str.EQUALS];},
         'parse'    : function p_formula_parse(v, io) {
-            log('parse', "formula:", v);
+            log('parse', "formula:", v[0]);
 
             if( !v[0] || v[0].token !== puncts_str.EQUALS )
             {
@@ -984,28 +902,6 @@ function load_some_data(cb)
     var testjson = fs.readFile('dnd.json', cb);
 }
 
-function runtest(context)
-{
-    for(var i = 0; i < formula_candidates.length; i++)
-    {
-        var f = formula_candidates[i].text;
-        var r = formula_candidates[i].result;
-        log('formula', "candidate:", f);
-        var io = {'context':context};
-        result = parse_formula(f, io);
-        log('testing', {'success':result, 'io':io});
-        if( result !== r.success )
-        {
-            log('testing', "result was", result, "; should have been", r.success);
-        } else if( io.value !== r.value ) {
-            log('testing', "value was", io.value, "; should have been", r.value);
-        } else {
-            log('testing', "result and value were correct.");
-        }
-        log('padding', '\n');
-    }
-}
-
 function parent(tree, target)
 {
     var sub;
@@ -1023,18 +919,68 @@ function parent(tree, target)
         return false; }
 }
 
+function runtestitem(tree, test_item)
+{
+    var f = test_item.text;
+    var n = test_item.node;
+    var r = test_item.result;
+
+    log('formula', "candidate:", f);
+    var io = {'context':{'root':tree, 'curr':n}};
+    result = parse_formula(f, io);
+    log('testing', {'success':result, 'io':io});
+    if( result !== r.success )
+    {
+        log('testing', "result was", result, "; should have been", r.success);
+    } else if( io.value !== r.value ) {
+        log('testing', "value was", io.value, "; should have been", r.value);
+    } else {
+        log('testing', "result and value were correct.");
+    }
+    log('padding', '\n');
+}
+
 load_some_data(function(err, data){
+    var i;
     var root = JSON.parse(data);
 
-    var n1 = root.characters[0].abilities;
-    log('debug', n1, parent(root, n1));
-    var context1 = {'root':root, 'curr':n1};
-    log('debug', context1);
-    runtest(context1);
+    formula_candidates = [
+        {
+            'node'   : root,
+            'text'   : '=sum(/<characters>[*]<levels>[*]<level>)',
+            'result' : {'success':true, 'value':147.7}
+        },
+        {
+            'node'   : root,
+            'text'   : '=sum(/<characters>[1]<levels>[*]<level>)',
+            'result' : {'success':true, 'value':14.7}
+        },
+        {
+            'node'   : root,
+            'text'   : '=sum(/<characters>[0]<levels>[*]<level>)',
+            'result' : {'success':true, 'value':133}
+        },
+        {
+            'node'   : root.characters[0].abilities,
+            'text'   : '=add(max(.parent<levels>[*]<level>), 2)',
+            'result' : {'success':true, 'value':134}
+        },
+        {
+            'node'   : root.characters[0].abilities,
+            'text'   : '=sum(.parent<levels>[*]<level>)',
+            'result' : {'success':true, 'value':133}
+        },
+    ];
 
-    // var n2 = root['array-of-arrays'][2][1];
-    // log('debug', n2, parent(root, n2));
-    // var context2 = {'root':root, 'curr':n2};
-    // log('debug', context2);
-    // runtest(context2);
+    for(i = 0; i < 10; i++)
+    {
+        log('padding');
+    }
+
+    for(i = 0; i < formula_candidates.length; i++)
+    {
+        var cand = formula_candidates[i];
+        log('debug', cand);
+        runtestitem(root, cand);
+    }
 });
