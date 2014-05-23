@@ -1,14 +1,15 @@
 var lex = require('./lexer');
 var functions = require('./functions').functions;
 var log = require('./log').log;
+var o = require('./myobject');
 
 function helpervaluegetter(root_node, curr_node, path_elements, params)
 {
-    log('path', params.label, path_elements);
+    log('path', params.label, path_elements, curr_node);
     try {
         if( path_elements.length === 0 )
         {
-            if( curr_node instanceof Array || curr_node instanceof Object )
+            if( o.isArray(curr_node)|| o.isObject(curr_node) )
             {
                 log('type_error', "attempted to fetch non-leaf node");
                 return {'success':false};
@@ -19,6 +20,7 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
         var sel = path_elements[0].selector;
         var subpath = path_elements.slice(1);
         var ret = [];
+        var s;
         switch(t)
         {
             case 'THIS':
@@ -29,39 +31,25 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
             case 'ELEMENT':
                 if( params.allow_star && sel === '(STAR)' )
                 {
-                    if(t === 'MEMBER')
+                    if(t === 'MEMBER' && !o.isObject(curr_node) )
                     {
-                        if( !(curr_node instanceof Object) )
-                        {
-                            log('type_error', "attempted to get members of a non-object");
-                            return {'success':false};
-                        }
-                        for(var m in curr_node)
-                        {
-                            var members = tensorvaluesgetter(root_node, curr_node[m], subpath);
-                            if( !members.success )
-                            {
-                                return false;
-                            }
-                            ret = ret.concat(members.value);
-                        }
+                        log('type_error', "attempted to get members of a non-object");
+                        return {'success':false};
                     }
-                    if(t === 'ELEMENT')
+                    if(t === 'ELEMENT' && !o.isArray(curr_node) )
                     {
-                        if( !(curr_node instanceof Array) )
+                        log('type_error', "attempted to get elements of a non-array");
+                        return {'success':false};
+                    }
+                    for(s in o.selectors(curr_node))
+                    {
+                        var e = o.child(curr_node,s);
+                        var elements = tensorvaluesgetter(root_node, e, subpath);
+                        if( !elements.success )
                         {
-                            log('type_error', "attempted to get elements of a non-array");
-                            return {'success':false};
+                            return false;
                         }
-                        for(var i = 0; i < curr_node.length; i++)
-                        {
-                            var elements = tensorvaluesgetter(root_node, curr_node[i], subpath);
-                            if( !elements.success )
-                            {
-                                return false;
-                            }
-                            ret = ret.concat(elements.value);
-                        }
+                        ret = ret.concat(elements.value);
                     }
                     return {'success':true, 'value':ret};
                 } else {
@@ -75,19 +63,23 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
                 }
                 break; // should have already hit a "return" in all cases
             case 'PARENT':
-                return params.recurse(root_node, parent(root_node, curr_node), subpath);
+                return params.recurse(root_node, o.parent(root_node, curr_node), subpath);
             default:
                 log('path_error', "unknown path element type:", t);
                 return {'success':false};
         }
     } catch (err) {
         log('path_error', "could not traverse path:", path_elements);
+        log('path_error', "from node:", curr_node);
+        log('path_error', "exception:", err);
+        console.trace();
         return {'success':false};
     }
 
     log('path_error', "not sure what happened, here");
     return {'success':false};
 }
+
 function scalarvaluegetter(root_node, curr_node, path_elements)
 {
     var params = {
@@ -97,6 +89,7 @@ function scalarvaluegetter(root_node, curr_node, path_elements)
     };
     return helpervaluegetter(root_node, curr_node, path_elements, params);
 }
+
 function tensorvaluesgetter(root_node, curr_node, path_elements)
 {
     var params = {
@@ -133,10 +126,159 @@ function asserttokens(v, i, toks, err)
     return false;
 }
 
+function p_params_helper(v, io, params)
+{
+    var comma = ',';
+    var success;
+    log('parse', params.label, v[0]);
+
+    var param1_io = {'context':io.context};
+    success = params.first_prod.parse(v, param1_io);
+    if( !success )
+    {
+        return false;
+    }
+
+    if( params.second_prod )
+    {
+        v = param1_io.remainder;
+        if(!asserttoken(v, 0, lex.punct.COMMA, "comma required between binary function parameters")) return false;
+
+        var param2_io = {'context':io.context};
+        success = params.second_prod.parse(v.slice(1), param2_io);
+        if( !success )
+        {
+            return false;
+        }
+
+        io.value = { 'param1' : param1_io.value, 'param2' : param2_io.value};
+        io.remainder = param2_io.remainder;
+        log('debug', io);
+        return true;
+    } else {
+        io.value = { 'param1' : param1_io.value };
+        io.remainder = param1_io.remainder;
+        log('debug', io);
+        return true;
+    }
+}
+
+function p_subpath_helper(v, io, params)
+{
+    log('parse', params.label, v[0]);
+
+    var path = [];
+    var remainder = v;
+
+    var success = true;
+
+    var allow = ( params.allow_star ) ? ['STAR'] : [];
+    switch( v[0].token )
+    {
+        case lex.punct.DOT:
+        log('parse', "v1:", v[1]);
+            if(!asserttoken(v, 1, 'PARENT', 'DOT must be followed by "parent"')) return false;
+            path.push({'type':'PARENT', 'selector':null});
+            remainder = v.slice(2);
+            break;
+        case lex.punct.LBRACK: // brackets for index
+            allow.push('DIGITS');
+            if(!asserttokens(v, 1, allow, params.index_error))
+            {
+                return false;
+            }
+            if(!asserttoken(v, 2, lex.punct.RBRACK, 'right bracket expected to finish index')) return false;
+            path.push({'type':'ELEMENT', 'selector':v[1].tag}); // null for star
+            remainder = v.slice(3);
+            break;
+        case lex.punct.LCHEV:  // chevrons for key
+            allow.push('LABEL');
+            if(!asserttokens(v, 1, allow, params.label_error))
+            {
+                return false;
+            }
+            if(!asserttoken(v, 2, lex.punct.RCHEV, 'right chevron expected to finish key')) return false;
+            path.push({'type':'MEMBER', 'selector':v[1].tag}); // null for star
+            remainder = v.slice(3);
+            break;
+        default:
+            log('parse_error', 'subpath should start with one of: < [ .');
+            return false;
+    }
+
+    if(remainder.length > 0)
+    {
+        success = true;
+        var prod = params.subprod;
+        var i = prod.prefixes().indexOf(remainder[0].token);
+        if( i > -1 )
+        {
+            var path_io = {'context':io.context};
+            success = prod.parse(remainder, path_io);
+
+            path = path.concat(path_io.path);
+            remainder = path_io.remainder;
+        }
+    }
+
+    io.path = path;
+    io.remainder = remainder;
+    return success;
+}
+
+function p_path_helper(v, io, parseparams)
+{
+    log('parse', parseparams.label, v[0]);
+
+    var prefix, remainder;
+
+    if(v[0].token === 'SLASH')
+    {
+        prefix = 'ROOT';
+        remainder = v.slice(1);
+    } else {
+        prefix = 'THIS';
+        remainder = v;
+    }
+    var path = [ {'type':prefix, 'selector':null} ];
+
+    var success = true;
+    var prod = parseparams.prod;
+
+    var j = prod.prefixes().indexOf(remainder[0].token);
+    if( j > -1 )
+    {
+        var path_io = {'context':io.context};
+        success = prod.parse(remainder, path_io);
+
+        if( !success ) { return false; }
+
+        path = path.concat(path_io.path);
+        io.remainder = path_io.remainder;
+    } else {
+        io.remainder = remainder;
+    }
+
+    if( !success ) { return false; }
+
+    var got = parseparams.getter(io.context.root, io.context.curr, path);
+    log('path', got);
+    if( got.success )
+    {
+        io.value = got.value;
+        io.remainder = io.remainder;
+
+        log('debug', io);
+        return true;
+    }
+    return false;
+}
+
+
+
 productions = {
     'p_number' : {
-        'cases'    : p_number_cases = ['DIGITS', 'NEG'],
-        'prefixes' : function get_p_number_prefixes(){return p_number_cases;},
+        'prefixes' : function get_p_number_prefixes(){return ['DIGITS', 'NEG'];},
         'parse'    : function p_number_parse(v, io) {
             log('parse', "number:", v[0]);
             var i = 0, value;
@@ -180,8 +322,7 @@ productions = {
         },
     },
     'p_bool' : {
-        'cases'    : p_bool_cases = ['BOOL'],
-        'prefixes' : function get_p_bool_prefixes(){return p_bool_cases;},
+        'prefixes' : function get_p_bool_prefixes(){return ['BOOL'];},
         'parse'    : function p_bool_parse(v, io) {
             log('parse', "bool:", v[0]);
             if(!asserttoken(v, 0, 'BOOL', "bool must be bool.")) return false;
@@ -216,41 +357,6 @@ productions = {
             log('debug', io);
             return true;
         },
-    },
-    'p_params_helper' : p_params_helper = function p_params_helper(v, io, params){
-        var comma = ',';
-        var success;
-        log('parse', params.label, v[0]);
-
-        var param1_io = {'context':io.context};
-        success = params.first_prod.parse(v, param1_io);
-        if( !success )
-        {
-            return false;
-        }
-
-        if( params.second_prod )
-        {
-            v = param1_io.remainder;
-            if(!asserttoken(v, 0, lex.punct.COMMA, "comma required between binary function parameters")) return false;
-
-            var param2_io = {'context':io.context};
-            success = params.second_prod.parse(v.slice(1), param2_io);
-            if( !success )
-            {
-                return false;
-            }
-
-            io.value = { 'param1' : param1_io.value, 'param2' : param2_io.value};
-            io.remainder = param2_io.remainder;
-            log('debug', io);
-            return true;
-        } else {
-            io.value = { 'param1' : param1_io.value };
-            io.remainder = param1_io.remainder;
-            log('debug', io);
-            return true;
-        }
     },
     'p_unary_params' : {
         'prefixes' : function get_p_unary_params_prefixes(){return [lex.punct.DOT];},
@@ -355,69 +461,6 @@ productions = {
             return functions.aggregate[fname](p);
         }
     },
-    'p_subpath_helper' : p_subpath_helper = function p_subpath_helper(v, io, params){
-        log('parse', params.label, v[0]);
-
-        var path = [];
-        var remainder = v;
-
-        var success = true;
-
-        var allow = ( params.allow_star ) ? ['STAR'] : [];
-        switch( v[0].token )
-        {
-            case lex.punct.DOT:
-            log('parse', "v1:", v[1]);
-                if(!asserttoken(v, 1, 'PARENT', 'DOT must be followed by "parent"')) return false;
-                path.push({'type':'PARENT', 'selector':null});
-                remainder = v.slice(2);
-                break;
-            case lex.punct.LBRACK: // brackets for index
-                allow.push('DIGITS');
-                if(!asserttokens(v, 1, allow, params.index_error))
-                {
-                    return false;
-                }
-                if(!asserttoken(v, 2, lex.punct.RBRACK, 'right bracket expected to finish index')) return false;
-                path.push({'type':'ELEMENT', 'selector':v[1].tag}); // null for star
-                remainder = v.slice(3);
-                break;
-            case lex.punct.LCHEV:  // chevrons for key
-                allow.push('LABEL');
-                if(!asserttokens(v, 1, allow, params.label_error))
-                {
-                    return false;
-                }
-                if(!asserttoken(v, 2, lex.punct.RCHEV, 'right chevron expected to finish key')) return false;
-                path.push({'type':'MEMBER', 'selector':v[1].tag}); // null for star
-                remainder = v.slice(3);
-                break;
-            default:
-                log('parse_error', 'subpath should start with one of: < [ .');
-                return false;
-        }
-
-        // log('debug', "remainder:", remainder);
-
-        if(remainder.length > 0)
-        {
-            success = true;
-            var prod = params.subprod;
-            var i = prod.prefixes().indexOf(remainder[0].token);
-            if( i > -1 )
-            {
-                var path_io = {'context':io.context};
-                success = prod.parse(remainder, path_io);
-
-                path = path.concat(path_io.path);
-                remainder = path_io.remainder;
-            }
-        }
-
-        io.path = path;
-        io.remainder = remainder;
-        return success;
-    },
     'p_scalar_subpath' : {
         'cases'    : p_scalar_subpath_prefixes = [lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_scalar_subpath_prefixes(){return p_scalar_subpath_prefixes;},
@@ -445,52 +488,6 @@ productions = {
             };
             return p_subpath_helper(v, io, params);
         }, // aonsfokasnofnasd
-    },
-    'p_path_helper' : p_path_helper = function p_path_helper(v, io, parseparams){
-        log('parse', parseparams.label, v[0]);
-
-        var prefix, remainder;
-
-        if(v[0].token === 'SLASH')
-        {
-            prefix = 'ROOT';
-            remainder = v.slice(1);
-        } else {
-            prefix = 'THIS';
-            remainder = v;
-        }
-        var path = [ {'type':prefix, 'selector':null} ];
-
-        var success = true;
-        var prod = parseparams.prod;
-
-        var j = prod.prefixes().indexOf(remainder[0].token);
-        if( j > -1 )
-        {
-            var path_io = {'context':io.context};
-            success = prod.parse(remainder, path_io);
-
-            if( !success ) { return false; }
-
-            path = path.concat(path_io.path);
-            io.remainder = path_io.remainder;
-        } else {
-            io.remainder = remainder;
-        }
-
-        if( !success ) { return false; }
-
-        var got = parseparams.getter(io.context.root, io.context.curr, path);
-        log('path', got);
-        if( got.success )
-        {
-            io.value = got.value;
-            io.remainder = io.remainder;
-
-            log('debug', io);
-            return true;
-        }
-        return false; // aonsfokasnofnasd
     },
     'p_scalar_path' : {
         'cases'    : p_scalar_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
@@ -617,7 +614,6 @@ productions = {
         },
     },
     'p_formula' : {
-        'cases'    : ['p_scalar'],
         'prefixes' : function get_p_formula_prefixes(){return [lex.punct.EQUALS];},
         'parse'    : function p_formula_parse(v, io) {
             log('parse', "formula:", v[0]);
@@ -643,102 +639,6 @@ productions = {
     }
 };
 
-function parse_formula(formula, io)
-{
-    var tokenstream = lex.lex(formula);
-    log('lex', tokenstream);
-    if( tokenstream === false )
-    {
-        return false;
-    }
-    var formula_io = {'context':io.context};
-    var success = productions.p_formula.parse(tokenstream, formula_io);
-    io.value = formula_io.value;
-    return success;
-}
-
-function load_some_data(cb)
-{
-    var fs = require('fs');
-    var testjson = fs.readFile('dnd.json', cb);
-}
-
-function parent(tree, target)
-{
-    var sub;
-    if( tree instanceof Array ) {
-        for( var i = 0; i < tree.length; i++ ) {
-            if( tree[i] === target ) { return tree; }
-            sub = parent(tree[i], target);
-            if( sub ) { return sub; } }
-        return false; }
-    if( tree instanceof Object ) {
-        for( var key in tree ) {
-            if( tree[key] === target ) { return tree; }
-            sub = parent(tree[key], target);
-            if( sub ) { return sub; } }
-        return false; }
-}
-
-function runtestitem(tree, test_item)
-{
-    var f = test_item.text;
-    var n = test_item.node;
-    var r = test_item.result;
-
-    log('formula', "candidate:", f);
-    var io = {'context':{'root':tree, 'curr':n}};
-    result = parse_formula(f, io);
-    log('testing', {'success':result, 'io':io});
-    if( result !== r.success )
-    {
-        log('testing', "result was", result, "; should have been", r.success);
-    } else if( io.value !== r.value ) {
-        log('testing', "value was", io.value, "; should have been", r.value);
-    } else {
-        log('testing', "result and value were correct.");
-    }
-    log('padding', '\n');
-}
-
-load_some_data(function(err, data){
-    var i;
-    var root = JSON.parse(data);
-
-    var formula_candidates = [
-        {
-            'node'   : root,
-            'text'   : '=sum(/<characters>[*]<levels>[*]<level>)',
-            'result' : {'success':true, 'value':147.7}
-        },
-        {
-            'node'   : root,
-            'text'   : '=sum(/<characters>[1]<levels>[*]<level>)',
-            'result' : {'success':true, 'value':14.7}
-        },
-        {
-            'node'   : root,
-            'text'   : '=sum(/<characters>[0]<levels>[*]<level>)',
-            'result' : {'success':true, 'value':133}
-        },
-        {
-            'node'   : root.characters[0].abilities,
-            'text'   : '=add(max(.parent<levels>[*]<level>), 2)',
-            'result' : {'success':true, 'value':134}
-        },
-        {
-            'node'   : root.characters[0].abilities,
-            'text'   : '=sum(.parent<levels>[*]<level>)',
-            'result' : {'success':true, 'value':133}
-        },
-    ];
-
-    for(i = 0; i < 10; i++) { log('padding'); }
-
-    for(i = 0; i < formula_candidates.length; i++)
-    {
-        var cand = formula_candidates[i];
-        log('debug', cand);
-        runtestitem(root, cand);
-    }
-});
+module.exports = {
+    'parse' : productions.p_formula.parse,
+};

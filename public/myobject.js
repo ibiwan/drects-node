@@ -1,0 +1,58 @@
+
+function isArray(node)
+{
+    return node instanceof Array;
+}
+function isObject(node)
+{
+    return node instanceof Object;
+}
+function selectors(node)
+{
+    if(isArray(node))
+    {
+        var indices = [];
+        for(var i = 0; i < node.length; i++)
+        {
+            indices.push(i);
+        }
+        return indices;
+    }
+    if(isObject(node))
+    {
+        var keys = [];
+        for(var k in node)
+        {
+            keys.push(k);
+        }
+        return keys;
+    }
+}
+function parent(tree, target)
+{
+    var sub;
+    if( isArray(tree) ) {
+        for( var i = 0; i < tree.length; i++ ) {
+            if( tree[i] === target ) { return tree; }
+            sub = parent(tree[i], target);
+            if( sub ) { return sub; } }
+        return false; }
+    if( isObject(tree) ) {
+        for( var key in tree ) {
+            if( tree[key] === target ) { return tree; }
+            sub = parent(tree[key], target);
+            if( sub ) { return sub; } }
+        return false; }
+}
+function child(tree, selector)
+{
+    return tree[selector];
+}
+
+module.exports = {
+    'isArray'   : isArray,
+    'isObject'  : isObject,
+    'parent'    : parent,
+    'child'     : child,
+    'selectors' : selectors,
+};

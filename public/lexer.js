@@ -117,7 +117,6 @@ function lex(str)
     for(var i = 0; i < str.length; i++)
     {
         var c = str.substr(i, 1);
-
         if( c === "'" )
         {
             var ls = lexstring(str.substr(i));
@@ -129,11 +128,14 @@ function lex(str)
             tokenstream.push({'token':'STRING', 'tag':ls.string});
             continue;
         }
-        if( p = puncts_dict[c] )
+
+        var p = puncts_dict[c];
+        if( p )
         {
             tokenstream.push({'token':p, 'tag':'(' + p + ')'});
             continue;
         }
+
         if( c >= '0' && c <= '9' )
         {
             var ld = lexdigits(str.substr(i));
@@ -141,6 +143,7 @@ function lex(str)
             tokenstream.push({'token':'DIGITS', 'tag':ld.digits});
             continue;
         }
+
         if( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) )
         {
             var ll = lexlabel(str.substr(i));
