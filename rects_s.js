@@ -17,6 +17,7 @@ handlers = {
       {
           console.log("getdoc()");
           res.sendfile(__dirname + "/dnd.json");
+          // res.sendfile(__dirname + "/reports.json");
       },
   'savedoc' : function savedoc(req, res)
       {

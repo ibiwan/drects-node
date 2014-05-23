@@ -59,12 +59,20 @@
                 var _config = {};
                 var configlabels = ['rex-ordering', 'rex-primaries'];
                 var loadconfig = function loadconfig(tree)
+                {
+                    for(var i = 0; i < configlabels.length; i++)
+                    {
+                        _config[configlabels[i]] = [];
+                    }
+                    loadconfiginner(tree);
+                };
+                var loadconfiginner = function loadconfiginner(tree)
                     {
                         if( tree instanceof Array )
                         {
                             for( var i = 0; i < tree.length; i++ )
                             {
-                                loadconfig(tree[i]);
+                                loadconfiginner(tree[i]);
                             }
                             return;
                         }
@@ -79,7 +87,7 @@
                                 }
                                 else
                                 {
-                                    loadconfig(tree[key]);
+                                    loadconfiginner(tree[key]);
                                 }
                             }
                         }
