@@ -3,9 +3,9 @@ var functions = require('./functions').functions;
 var log = require('./log').log;
 var o = require('./myobject');
 
-function helpervaluegetter(root_node, curr_node, path_elements, params)
+function valuegetter(root_node, curr_node, path_elements, allow_star)
 {
-    log('path', params.label, path_elements, curr_node);
+    log('path', "valuegetter:", path_elements, curr_node);
     try {
         if( path_elements.length === 0 )
         {
@@ -24,12 +24,12 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
         switch(t)
         {
             case 'THIS':
-                return params.recurse(root_node, curr_node, subpath);
+                return valuegetter(root_node, curr_node, subpath, allow_star);
             case 'ROOT':
-                return params.recurse(root_node, root_node, subpath);
+                return valuegetter(root_node, root_node, subpath, allow_star);
             case 'MEMBER':
             case 'ELEMENT':
-                if( params.allow_star && sel === '(STAR)' )
+                if( allow_star && sel === '(STAR)' )
                 {
                     if(t === 'MEMBER' && !o.isObject(curr_node) )
                     {
@@ -44,7 +44,7 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
                     for(s in o.selectors(curr_node))
                     {
                         var e = o.child(curr_node,s);
-                        var elements = tensorvaluesgetter(root_node, e, subpath);
+                        var elements = valuegetter(root_node, e, subpath, allow_star);
                         if( !elements.success )
                         {
                             return false;
@@ -59,11 +59,11 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
                         log('path_error', "could not find element:", sel);
                         return {'success':false};
                     }
-                    return params.recurse(root_node, mel, subpath);
+                    return valuegetter(root_node, mel, subpath, allow_star);
                 }
                 break; // should have already hit a "return" in all cases
             case 'PARENT':
-                return params.recurse(root_node, o.parent(root_node, curr_node), subpath);
+                return valuegetter(root_node, o.parent(root_node, curr_node), subpath, allow_star);
             default:
                 log('path_error', "unknown path element type:", t);
                 return {'success':false};
@@ -78,26 +78,6 @@ function helpervaluegetter(root_node, curr_node, path_elements, params)
 
     log('path_error', "not sure what happened, here");
     return {'success':false};
-}
-
-function scalarvaluegetter(root_node, curr_node, path_elements)
-{
-    var params = {
-        'label'   : "getting scalar from path:\n",
-        'recurse' : scalarvaluegetter,
-        'allow_star' : false,
-    };
-    return helpervaluegetter(root_node, curr_node, path_elements, params);
-}
-
-function tensorvaluesgetter(root_node, curr_node, path_elements)
-{
-    var params = {
-        'label'   : "getting tensor from path:\n",
-        'recurse' : tensorvaluesgetter,
-        'allow_star' : true,
-    };
-    return helpervaluegetter(root_node, curr_node, path_elements, params);
 }
 
 function asserttoken(v, i, tok, err)
@@ -126,7 +106,7 @@ function asserttokens(v, i, toks, err)
     return false;
 }
 
-function p_params_helper(v, io, params)
+function params_helper(v, io, params)
 {
     var comma = ',';
     var success;
@@ -163,7 +143,7 @@ function p_params_helper(v, io, params)
     }
 }
 
-function p_subpath_helper(v, io, params)
+function subpath_helper(v, io, params)
 {
     log('parse', params.label, v[0]);
 
@@ -226,7 +206,7 @@ function p_subpath_helper(v, io, params)
     return success;
 }
 
-function p_path_helper(v, io, parseparams)
+function path_helper(v, io, parseparams)
 {
     log('parse', parseparams.label, v[0]);
 
@@ -261,7 +241,7 @@ function p_path_helper(v, io, parseparams)
 
     if( !success ) { return false; }
 
-    var got = parseparams.getter(io.context.root, io.context.curr, path);
+    var got = valuegetter(io.context.root, io.context.curr, path, parseparams.allow_star);
     log('path', got);
     if( got.success )
     {
@@ -273,8 +253,6 @@ function p_path_helper(v, io, parseparams)
     }
     return false;
 }
-
-
 
 productions = {
     'p_number' : {
@@ -361,7 +339,7 @@ productions = {
     'p_unary_params' : {
         'prefixes' : function get_p_unary_params_prefixes(){return [lex.punct.DOT];},
         'parse'    : function p_unary_params_parse(v, io) {
-            return p_params_helper(v, io, {
+            return params_helper(v, io, {
                 'label':'unary_params:',
                 'first_prod' : productions.p_scalar,
             });
@@ -370,7 +348,7 @@ productions = {
     'p_aggregate_params' : {
         'prefixes' : function get_p_aggregate_params_prefixes(){return ['.'];},
         'parse'    : function p_aggregate_params_parse(v, io) {
-            return p_params_helper(v, io, {
+            return params_helper(v, io, {
                 'label':'aggregate_params:',
                 'first_prod' : productions.p_tensor_path,
             });
@@ -379,7 +357,7 @@ productions = {
     'p_binary_params' : {
         'prefixes' : function get_p_binary_params_prefixes(){return ['.'];},
         'parse'    : function p_binary_params_parse(v, io) {
-            return p_params_helper(v, io, {
+            return params_helper(v, io, {
                 'label':'mixed_params:',
                 'first_prod' : productions.p_scalar,
                 'second_prod': productions.p_scalar,
@@ -389,7 +367,7 @@ productions = {
     'p_mixed_params' : {
         'prefixes' : function get_p_mixed_params_prefixes(){return ['.'];},
         'parse'    : function p_mixed_params_parse(v, io) {
-            return p_params_helper(v, io, {
+            return params_helper(v, io, {
                 'label':'mixed_params:',
                 'first_prod' : productions.p_scalar,
                 'second_prod': productions.p_tensor_path,
@@ -472,7 +450,7 @@ productions = {
                 'index_error'   : 'digits expected as index',
                 'subprod'       : productions.p_scalar_subpath,
             };
-            return p_subpath_helper(v, io, params);
+            return subpath_helper(v, io, params);
         }, // aonsfokasnofnasd
     },
     'p_tensor_subpath' : {
@@ -486,19 +464,19 @@ productions = {
                 'index_error'   : 'digits or * expected as index',
                 'subprod'       : productions.p_tensor_subpath,
             };
-            return p_subpath_helper(v, io, params);
+            return subpath_helper(v, io, params);
         }, // aonsfokasnofnasd
     },
     'p_scalar_path' : {
         'cases'    : p_scalar_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_scalar_path_prefixes(){return p_scalar_path_prefixes;},
         'parse'    : function p_scalar_path_parse(v, io) {
-            return p_path_helper(v, io, {
-                'label'    : "scalar path:",
-                'prefixes' : p_scalar_path_prefixes,
-                'error1'   : 'scalar path must start with one of: [ < . /',
-                'prod'     : productions.p_scalar_subpath,
-                'getter'   : scalarvaluegetter,
+            return path_helper(v, io, {
+                'label'      : "scalar path:",
+                'prefixes'   : p_scalar_path_prefixes,
+                'error1'     : 'scalar path must start with one of: [ < . /',
+                'prod'       : productions.p_scalar_subpath,
+                'allow_star' : false,
             });
         },
     },
@@ -506,12 +484,12 @@ productions = {
         'cases'    : p_tensor_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
         'prefixes' : function get_p_tensor_path_prefixes(){return p_tensor_path_prefixes;},
         'parse'    : function p_tensor_path_parse(v, io) {
-            return p_path_helper(v, io, {
-                'label'    : "tensor path:",
-                'prefixes' : p_tensor_path_prefixes,
-                'error1'   : 'tensor path must start with one of: [ < . /',
-                'prod'     : productions.p_tensor_subpath,
-                'getter'   : tensorvaluesgetter,
+            return path_helper(v, io, {
+                'label'      : "tensor path:",
+                'prefixes'   : p_tensor_path_prefixes,
+                'error1'     : 'tensor path must start with one of: [ < . /',
+                'prod'       : productions.p_tensor_subpath,
+                'allow_star' : true,
             });
         },
     },

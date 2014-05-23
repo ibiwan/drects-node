@@ -1,6 +1,7 @@
-var parser = require('./parser');
-var log = require('./log').log;
-var lex = require('./lexer');
+var parser = require('./public/parser');
+var log = require('./public/log').log;
+var lex = require('./public/lexer');
+var fs = require('fs');
 
 function parse_formula(formula, io)
 {
@@ -16,11 +17,6 @@ function parse_formula(formula, io)
     return success;
 }
 
-function load_some_data(cb)
-{
-    var fs = require('fs');
-    var testjson = fs.readFile('../dnd.json', cb);
-}
 
 function runtestitem(tree, test_item)
 {
@@ -43,7 +39,7 @@ function runtestitem(tree, test_item)
     log('padding', '\n');
 }
 
-load_some_data(function(err, data){
+fs.readFile('./dnd.json', function(err, data){
     var i;
     var root = JSON.parse(data);
 
