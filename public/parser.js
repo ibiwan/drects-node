@@ -9,24 +9,22 @@ function valuegetter(root_node, curr_node, path_elements, allow_star)
     try {
         if( path_elements.length === 0 )
         {
-            if( o.isArray(curr_node)|| o.isObject(curr_node) )
+            if( !o.isLeaf(curr_node) )
             {
                 log('type_error', "attempted to fetch non-leaf node");
                 return {'success':false};
             }
             return {'success':true, 'value':curr_node};
         }
+        var s;
         var t = path_elements[0].type;
         var sel = path_elements[0].selector;
         var subpath = path_elements.slice(1);
-        var ret = [];
-        var s;
         switch(t)
         {
             case 'THIS':
-                return valuegetter(root_node, curr_node, subpath, allow_star);
             case 'ROOT':
-                return valuegetter(root_node, root_node, subpath, allow_star);
+                return valuegetter(root_node, (t === 'THIS' ? curr_node : root_node), subpath, allow_star);
             case 'MEMBER':
             case 'ELEMENT':
                 if( allow_star && sel === '(STAR)' )
@@ -41,25 +39,20 @@ function valuegetter(root_node, curr_node, path_elements, allow_star)
                         log('type_error', "attempted to get elements of a non-array");
                         return {'success':false};
                     }
+                    var ret = [];
                     for(s in o.selectors(curr_node))
                     {
                         var e = o.child(curr_node,s);
-                        var elements = valuegetter(root_node, e, subpath, allow_star);
-                        if( !elements.success )
-                        {
-                            return false;
-                        }
+                        if( !e.success ) { return {'success':false}; }
+                        var elements = valuegetter(root_node, e.child, subpath, allow_star);
+                        if( !elements.success ) { return {'success':false}; }
                         ret = ret.concat(elements.value);
                     }
                     return {'success':true, 'value':ret};
                 } else {
-                    var mel = curr_node[sel];
-                    if( mel === undefined )
-                    {
-                        log('path_error', "could not find element:", sel);
-                        return {'success':false};
-                    }
-                    return valuegetter(root_node, mel, subpath, allow_star);
+                    var mel = o.child(curr_node,sel);
+                    if(!mel.success) { return {'success':false}; }
+                    return valuegetter(root_node, mel.child, subpath, allow_star);
                 }
                 break; // should have already hit a "return" in all cases
             case 'PARENT':
@@ -70,9 +63,9 @@ function valuegetter(root_node, curr_node, path_elements, allow_star)
         }
     } catch (err) {
         log('path_error', "could not traverse path:", path_elements);
-        log('path_error', "from node:", curr_node);
-        log('path_error', "exception:", err);
-        console.trace();
+        // log('path_error', "from node:", curr_node);
+        // log('path_error', "exception:", err);
+        // console.trace();
         return {'success':false};
     }
 

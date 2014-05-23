@@ -7,6 +7,10 @@ function isObject(node)
 {
     return node instanceof Object;
 }
+function isLeaf(node)
+{
+    return(!(isArray(node) || isObject(node)));
+}
 function selectors(node)
 {
     if(isArray(node))
@@ -46,12 +50,19 @@ function parent(tree, target)
 }
 function child(tree, selector)
 {
-    return tree[selector];
+    var mel = tree[selector]; // member or element
+    if( mel === undefined )
+    {
+        log('path_error', "could not find element:", sel);
+        return {'success':false};
+    }
+    return {'success':true,'child':mel};
 }
 
 module.exports = {
     'isArray'   : isArray,
     'isObject'  : isObject,
+    'isLeaf'    : isLeaf,
     'parent'    : parent,
     'child'     : child,
     'selectors' : selectors,
