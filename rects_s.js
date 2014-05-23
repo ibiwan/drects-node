@@ -8,6 +8,11 @@ var express    = require('express');
 var bodyParser = require('body-parser');
 
 handlers = {
+  'files'    : function files(req, res)
+      {
+          console.log("files("+req.params.filename+")");
+          res.sendfile(__dirname + '/public/' + req.params.filename);
+      },
   'mainpage' : function mainpage(req, res)
       {
           console.log("mainpage()");
@@ -43,6 +48,7 @@ var port = 1338;
 var app = express()
     .use(morgan('dev'))
     .get('/',                       handlers.mainpage)
+    .get('/files/:filename',        handlers.files)
     .get('/getdoc',                 handlers.getdoc)
     .post('/savedoc', bodyParser(), handlers.savedoc)
     .get('/favicon.ico', function(req, res){

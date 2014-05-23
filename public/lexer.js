@@ -28,10 +28,6 @@ var reserveds = {
     'NULL'      : ['null'],
     'PARENT'    : ['parent'],
     'BOOL'      : ['true', 'false'],
-    // 'MIXED'     : ['count'],
-    // 'UNARY'     : ['neg', 'abs', 'not'],
-    // 'AGGREGATE' : ['sum', 'prod', 'min', 'max', 'mean'],
-    // 'BINARY'    : ['add', 'sub', 'mul', 'div', 'mod', 'and', 'or'],
 };
 
 var flist = functions.get_list();
@@ -42,7 +38,6 @@ for(i = 0; i < flist.length; i++)
     if( !reserveds[type] ) { reserveds[type] = []; }
     reserveds[type].push(f.name);
 }
-console.log(reserveds);
 
 function lexlabel(haystack)
 {
