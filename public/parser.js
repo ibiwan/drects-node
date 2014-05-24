@@ -526,7 +526,7 @@ productions = {
             io.remainder = scalar_io.remainder;
             if( scalar_io.remainder.length > 0 )
             {
-                throw "parse error: didn't expect anything after formula, got:", scalar_io.remainder;
+                throw "parse error: didn't expect anything after formula, got:" + scalar_io.remainder;
             }
             log('debug', "returning from p_formula():", io);
         }
