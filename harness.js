@@ -5,16 +5,23 @@ var fs = require('fs');
 
 function parse_formula(formula, io)
 {
-    var tokenstream = lex.lex(formula);
-    log('lex', tokenstream);
-    if( tokenstream === false )
-    {
+    var tokenstream;
+    try {
+        tokenstream = lex.lex(formula);
+        log('lex', tokenstream);
+    }catch(e){
+        log('lex_error', e);
         return false;
     }
-    var formula_io = {'context':io.context};
-    var success = parser.parse(tokenstream, formula_io);
-    io.value = formula_io.value;
-    return success;
+    try {
+        var formula_io = {'context':io.context};
+        parser.parse(tokenstream, formula_io);
+        io.value = formula_io.value;
+    }catch(e){
+        log('parse_error', e);
+        return false;
+    }
+    return true;
 }
 
 
@@ -25,17 +32,19 @@ function runtestitem(tree, test_item)
     var r = test_item.result;
 
     log('formula', "candidate:", f);
+
     var io = {'context':{'root':tree, 'curr':n}};
-    result = parse_formula(f, io);
-    log('testing', {'success':result, 'io':io});
-    if( result !== r.success )
-    {
-        log('testing', "result was", result, "; should have been", r.success);
-    } else if( io.value !== r.value ) {
-        log('testing', "value was", io.value, "; should have been", r.value);
-    } else {
-        log('testing', "result and value were correct.");
+    try{
+        result = parse_formula(f, io);
+    }catch(e){
+        log('parse_error', e);
+        return false;
     }
+
+    log('testing', {'success':result, 'io':io});
+    if( result !== r.success ) throw "testing: result was " + result + "; should have been " + r.success;
+    if( io.value !== r.value ) throw "testing: value was " + io.value + "; should have been " + r.value;
+    log('testing', "result and value were correct.");
     log('padding', '\n');
 }
 
@@ -75,8 +84,12 @@ fs.readFile('./dnd.json', function(err, data){
 
     for(i = 0; i < formula_candidates.length; i++)
     {
-        var cand = formula_candidates[i];
-        log('debug', cand);
-        runtestitem(root, cand);
+        try{
+            var cand = formula_candidates[i];
+            log('debug', cand);
+            runtestitem(root, cand);
+        }catch(e){
+            log('testing', e);
+        }
     }
 });

@@ -192,6 +192,12 @@ function gentree(data, primaryvalue, summaryholder)
         $htmlnode.data('$$children', $$children);
         return {'$stack':$htmlnode, '$valuehtml':$htmlnode};
     }
+
+    if( data === null )
+    {
+        data = "null";
+    }
+
     var t = typeof(data);
     if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
     {
@@ -205,6 +211,8 @@ function gentree(data, primaryvalue, summaryholder)
     {
         return makeobject(data, primaryvalue, summaryholder);
     }
+    console.trace();
+    console.log(data);
     console.log("confused, now");
 }
 
@@ -335,7 +343,7 @@ function handleToggle(eventObject)
             $sub.hide().data('state','hidden');
             if( $summary ) $summary.show();
             $parent.hide().show();
-        }, 1000);
+        }, 500);
     }
 }
 

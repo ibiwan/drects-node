@@ -80,12 +80,7 @@ function lexstring(haystack)
         var c = chars[i];
         if( i === 0 )
         {
-            if( c === "'" ) // as it should be
-            {
-                continue;
-            }
-            log('lex_error', "string must start with single quote");
-            return false;
+            if( c !== "'" ) throw "lex error: string must start with single quote";
         }
         if( c === '\\' ) // escape!
         {
@@ -93,8 +88,7 @@ function lexstring(haystack)
             c = chars[i];
             if( [puncts_str.BSLASH, puncts_str.QUOTE].indexOf(c) === -1 )
             {
-                log('lex_error', "backslash in a string must precede backslash or single quote");
-                return false;
+                throw "lex error: backslash in a string must precede backslash or single quote";
             }
             substr.push(c);
             continue;
@@ -106,8 +100,8 @@ function lexstring(haystack)
         }
         substr.push(c);
     }
-    log('lex_error', "unterminated string");
-    return false;
+
+    throw "lex error: unterminated string";
 }
 
 function lex(str)
@@ -120,10 +114,6 @@ function lex(str)
         if( c === "'" )
         {
             var ls = lexstring(str.substr(i));
-            if( ls === false )
-            {
-                return false;
-            }
             i += ls.end_index;
             tokenstream.push({'token':'STRING', 'tag':ls.string});
             continue;
