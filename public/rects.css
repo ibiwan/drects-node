@@ -1,15 +1,24 @@
 .object2 {
+    display                : -webkit-flex;
+    -webkit-flex-direction : row;
+    -webkit-flex-wrap      : nowrap;
     display        : flex;
     flex-direction : row;
     flex-wrap      : nowrap;
     overflow-x     : scroll;
 }
 .array, .member, .vertical {
+    display                : -webkit-flex;
+    -webkit-flex-direction : column;
+    -webkit-flex-wrap      : nowrap;
     display        : flex;
     flex-direction : column;
     flex-wrap      : nowrap;
 }
 .object, .element, .horizontal {
+    display                : -webkit-flex;
+    -webkit-flex-direction : row;
+    -webkit-flex-wrap      : wrap;
     display        : flex;
     flex-direction : row;
     flex-wrap      : wrap;
