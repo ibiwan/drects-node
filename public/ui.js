@@ -1,3 +1,7 @@
+var parser = require('./public/parser');
+var log = require('./public/log').log;
+var lex = require('./public/lexer');
+
 var editicon = 'fa fa-pencil-square-o';
 var collapsers = {
     'element-open'  : 'fa fa-chevron-right',

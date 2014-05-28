@@ -533,6 +533,21 @@ productions = {
     }
 };
 
-module.exports = {
+myexports = {
     'parse' : productions.p_formula.parse,
 };
+if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
+    //Running inside node
+    module.exports = myexports;
+} else if ( typeof define === 'function' && define.amd ) {
+    //Running inside AMD (require.js)
+    define([], function () {return myexports;});
+} else {
+    //Dunno where we are, add it to the global context with a noConflict
+    var previous = context.myexports;
+    myexports.noConflict = function () {
+        context.myexports = previous;
+        return myexports;
+    };
+    context.myexports = myexports;
+}
