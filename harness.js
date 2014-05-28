@@ -1,6 +1,6 @@
-var parser = require('./public/parser');
-var log = require('./public/log').log;
-var lex = require('./public/lexer');
+var parser = requirejs(['./public/parser']);
+var log = requirejs(['./public/log']).log;
+var lex = requirejs(['./public/lexer']);
 var fs = require('fs');
 
 function parse_formula(formula, io)

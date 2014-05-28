@@ -72,7 +72,7 @@ if ( typeof module === 'object' && module && typeof module.exports === 'object' 
     module.exports = myexports;
 } else if ( typeof define === 'function' && define.amd ) {
     //Running inside AMD (require.js)
-    define([], function () {return myexports;});
+    define('myobject', [], function () {return myexports;});
 } else {
     //Dunno where we are, add it to the global context with a noConflict
     var previous = context.myexports;
