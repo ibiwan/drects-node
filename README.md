@@ -1,4 +1,5 @@
 drects-node
 ===========
 
-consider this for parsing: http://zaach.github.io/jison/docs/
+require idiom:
+https://github.com/ChiperSoft/PinVaultObserver/blob/master/pinvault-observer.js
