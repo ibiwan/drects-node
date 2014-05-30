@@ -1,15 +1,21 @@
-console.log("parser: requiring log, myobject, functions, lexer");
-requirejs(['./lexer', './functions', './myobject', './log'], function(lexer_module, function_module, o, log_module){
-    console.log(
-        "setting up parser:",
-        "lexer:", lexer_module,
-        "functions:", function_module,
-        "logger:", log_module,
-        "access wrapper:", o);
-
-    var functions = function_module.functions;
-    var log = log_module.log;
-
+(function(init){  // deps
+    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
+        // node
+        module.exports = init(
+            require('./lexer'),
+            require('./functions').functions,
+            require('./myobject'),
+            require('./log').log
+        );
+    } else if ( typeof define === 'function' && define.amd ) {
+        // amd (require.js)
+        define(
+            ['./lexer', './functions', './myobject', './log'],
+            function (lexer, functions, myobject, log) {
+                return init(lexer, functions.functions, myobject, log.log);
+            });
+    }
+})(function(lex, functions, o, log){ // init
     function valuegetter(root_node, curr_node, path_elements, allow_star)
     {
         log('path', "valuegetter:", path_elements, curr_node);
@@ -540,27 +546,8 @@ requirejs(['./lexer', './functions', './myobject', './log'], function(lexer_modu
         }
     };
 
-    myexports = {
+    return {
         'parse' : productions.p_formula.parse,
     };
-    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
-        //Running inside node
-        module.exports = myexports;
-    } else if ( typeof define === 'function' && define.amd ) {
-        //Running inside AMD (require.js)
-        console.log("exporting from parser");
-        define('parser', ['./lexer', './functions', './log', './myobject'], function () {return myexports;});
-    } else {
-        //Dunno where we are, add it to the global context with a noConflict
-        var previous = context.myexports;
-        myexports.noConflict = function () {
-            context.myexports = previous;
-            return myexports;
-        };
-        context.myexports = myexports;
-    }
 });
-
-
-
 

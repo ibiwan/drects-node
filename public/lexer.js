@@ -1,12 +1,17 @@
-console.log("lexer: requiring log and functions");
-requirejs(['./functions', './log'], function(functions_module, log_module){
-    console.log("setting up lexer:",
-        "functions:", functions_module,
-        "logger:", log_module);
-
-    var log       = log_module.log;
-    var functions = functions_module.functions;
-
+(function(init){  // deps
+    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
+        // node
+        module.exports = init(
+            require('./functions'),
+            require('./log').log
+        );
+    } else if ( typeof define === 'function' && define.amd ) {
+        // amd (require.js)
+        define(['./functions', './log'], function (functions, log) {
+            return init(functions, log.log);
+        });
+    }
+})(function(functions, log){ // init
     var puncts_dict = {
         '('  : 'LPAREN',
         ')'  : 'RPAREN',
@@ -166,26 +171,8 @@ requirejs(['./functions', './log'], function(functions_module, log_module){
         return tokenstream;
     }
 
-    myexports = {
+    return {
         'punct' : puncts_str,
         'lex'   : lex,
     };
-
-    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
-        //Running inside node
-        module.exports = myexports;
-    } else if ( typeof define === 'function' && define.amd ) {
-        //Running inside AMD (require.js)
-        console.log("exporting from lexer");
-        define('lexer', ['./functions', './log'], function () {return myexports;});
-    } else {
-        console.log("generic mode");
-        //Dunno where we are, add it to the global context with a noConflict
-        var previous = context.myexports;
-        myexports.noConflict = function () {
-            context.myexports = previous;
-            return myexports;
-        };
-        context.myexports = myexports;
-    }
 });

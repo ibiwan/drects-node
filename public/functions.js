@@ -1,11 +1,12 @@
-console.log("functions: requiring log");
-requirejs(['./log'], function(log_module){
-    var log = log_module.log();
-
-    console.log("setting up functions:",
-        "logger:", log_module
-    );
-
+(function(init){  // deps
+    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
+        // node
+        module.exports = init(require('./log').log);
+    } else if ( typeof define === 'function' && define.amd ) {
+        // amd (require.js)
+        define(['./log'], function (log) {return init(log.log);});
+    }
+})(function(log){ // init
     functions = {
         'unary' : {
             'abs' : function u_abs(p) { return abs(p); },
@@ -39,7 +40,22 @@ requirejs(['./log'], function(log_module){
                 return sum/count;
             },
             'max' : function a_max(a){
-                log('apply', "taking max of", a);
+                console.log(a);
+
+                console.log(log.log);
+
+
+
+                log(
+                    'apply',
+                    'taking max of',
+                    a
+                );
+
+
+
+
+
                 var max = -Infinity;
                 for( var i = 0; i < a.length; i++)
                 {
@@ -77,28 +93,8 @@ requirejs(['./log'], function(log_module){
         return list;
     }
 
-    myexports = {
+    return {
         'functions' : functions,
         'get_list':  get_list,
     };
-
-    console.log("functions exports:", myexports);
-
-    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
-        //Running inside node
-        module.exports = myexports;
-    } else if ( typeof define === 'function' && define.amd ) {
-        //Running inside AMD (require.js)
-        console.log("exporting from functions");
-        define('functions', ['./log'], function () {return myexports;});
-    } else {
-        //Dunno where we are, add it to the global context with a noConflict
-        var previous = context.myexports;
-        myexports.noConflict = function () {
-            context.myexports = previous;
-            return myexports;
-        };
-        context.myexports = myexports;
-    }
 });
-

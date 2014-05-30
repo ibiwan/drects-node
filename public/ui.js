@@ -1,13 +1,22 @@
-console.log("ui: requiring jquery, jquery-ui, log, lexer, parser");
-requirejs(['jquery', 'jquery-ui', './parser', './lexer', './log'], function($, jquerui, parser, lex, log_module){
-    var log = log_module.log;
-
-    console.log("setting up ui:",
-        "logger:", log_module,
-        "lexer:", lex,
-        "parser:", parser
-    );
-
+(function(init){  // deps
+    if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
+        // node
+        module.exports = init(
+            require('jquery'),
+            require('jquery-ui'),
+            require('parser'),
+            require('lexer'),
+            require('log').log
+        );
+    } else if ( typeof define === 'function' && define.amd ) {
+        // amd (require.js)
+        define(
+            ['jquery', 'jquery-ui', './parser', './lexer', './log'],
+            function ($, jqueryui, parser, lexer, log) {
+                return init($, jqueryui, parser, lexer, log.log);
+            });
+    }
+})(function($, jqueryui, parser, lex, log){ // init
     var editicon = 'fa fa-pencil-square-o';
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -458,4 +467,3 @@ requirejs(['jquery', 'jquery-ui', './parser', './lexer', './log'], function($, j
             });
     });
 });
-
