@@ -1,9 +1,7 @@
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
         // node
-        console.log("node mode:");
         var parser = require('./public/parser');
-        console.log("parser:", parser);
         module.exports = init(
             parser,
             require('./public/log').log,
@@ -12,7 +10,6 @@
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // amd (require.js)
-        console.log("web mode");
         define(['./parser', './log', './lexer', 'fs'], function (parser, log, lexer, fs) {return init(parser, log.log, lexer, fs);});
     }
 })(function(parser, log, lex, fs){ // init

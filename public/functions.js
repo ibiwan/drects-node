@@ -40,26 +40,9 @@
                 return sum/count;
             },
             'max' : function a_max(a){
-                console.log(a);
-
-                console.log(log.log);
-
-
-
-                log(
-                    'apply',
-                    'taking max of',
-                    a
-                );
-
-
-
-
-
                 var max = -Infinity;
                 for( var i = 0; i < a.length; i++)
                 {
-                    log('apply', 'a[i]', a[i]);
                     if( a[i] > max )
                     {
                         max = a[i];
