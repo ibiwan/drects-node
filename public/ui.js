@@ -17,6 +17,7 @@
             });
     }
 })(function($, jqueryui, parser, lex, log){ // init
+
     var editicon = 'fa fa-pencil-square-o';
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -24,6 +25,7 @@
         'member-open'   : 'fa fa-chevron-down',
         'member-close'  : 'fa fa-chevron-left'
     };
+    var formula_nodes = [];
 
     var config = (function(){
         var _config = {};
@@ -117,6 +119,11 @@
         }
         function makeprimitivestack(type, data)
         {
+            if( data[0] === '=' )
+            {
+                type = 'formula';
+            }
+
             var $valuenode = $newdiv(type, data);
 
             var $editbutton = $newdiv('editbutton', '<i class="' + editicon + '"></i>')
@@ -127,6 +134,12 @@
                 .append($valuenode)
                 .append($editbutton)
                 .addClass("horizontal");
+
+            if( type === 'formula' )
+            {
+                $editbutton.data('formula', data);
+                formula_nodes.push($editbutton);
+            }
 
             return {'$stack': $primstack, '$valuehtml':$valuenode};
         }
@@ -446,6 +459,46 @@
         });
     }
 
+    function parse_formula(formula, io)
+    {
+        var tokenstream;
+        try {
+            tokenstream = lex.lex(formula);
+            log('lex', tokenstream);
+        }catch(e){
+            log('lex_error', e);
+            log('lex_error', e.stack);
+            return false;
+        }
+        try {
+            var formula_io = {'context':io.context};
+            parser.parse(tokenstream, formula_io);
+            io.value = formula_io.value;
+        }catch(e){
+            log('parse_error', e);
+            log('parse_error', e.stack);
+            return false;
+        }
+        return true;
+    }
+
+    function calculateFormulas()
+    {
+        for( var i = 0; i < formula_nodes.length; i++ )
+        {
+            var node = formula_nodes[i];
+
+            var formula = node.data('formula');
+            var io = {'context':{'root':$('#root'), 'curr':node.data('$valuehtml')}};
+
+            var success = parse_formula(formula, io);
+            if( success )
+            {
+                node.data('$valuehtml').text(io.value);
+            }
+        }
+    }
+
     $(function initialize(){
         $("body").disableSelection();
         $.ajax("getdoc")
@@ -464,6 +517,8 @@
 
                 $('.controller').click(handleToggle);
                 $('.editbutton').click(handleEdit);
+
+                calculateFormulas();
             });
     });
 });

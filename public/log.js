@@ -8,18 +8,21 @@
     }
 })(function(){ // init
     var out = {
-        'log_type'    : true,
         'padding'     : true,
+        'log_type'    : true,
+
         'formula'     : true,
-        // 'parse'       : true,
+        'testing'     : true,
+
         'parse_error' : true,
-        // 'lex'         : true,
         'lex_error'   : true,
-        // 'debug'       : true,
-        // 'path'        : true,
         'path_error'  : true,
         'type_error'  : true,
-        'testing'     : true,
+
+        // 'parse'       : true,
+        // 'lex'         : true,
+        // 'debug'       : true,
+        // 'path'        : true,
         // 'apply'       : true,
     };
 
@@ -32,7 +35,8 @@
             {
                 values.unshift(type.toUpperCase() + ':');
             }
-            console.log.apply(this, values);
+            console.log(values);
+            // console.log.apply(this, values); // why did this stop working?
         }
     }
 

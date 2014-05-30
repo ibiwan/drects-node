@@ -4,13 +4,13 @@
         module.exports = init(
             require('./lexer'),
             require('./functions').functions,
-            require('./myobject'),
+            require('./jsonobject'),
             require('./log').log
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // amd (require.js)
         define(
-            ['./lexer', './functions', './myobject', './log'],
+            ['./lexer', './functions', './drectsobject', './log'],
             function (lexer, functions, myobject, log) {
                 return init(lexer, functions.functions, myobject, log.log);
             });
@@ -27,7 +27,7 @@
                 throw "type error: attempted to fetch non-leaf node";
             }
             log('debug', "returning curr_node:", curr_node);
-            return curr_node;
+            return o.value(curr_node);
         }
         var s;
         var t = path_elements[0].type;

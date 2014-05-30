@@ -7,13 +7,14 @@
         define([], function () {return init();});
     }
 })(function(){ // init
+
     function isArray(node)
     {
-        return node instanceof Array;
+        return (node.attr('class') === 'array');
     }
     function isObject(node)
     {
-        return node instanceof Object;
+        return (node.attr('class') === 'object');
     }
     function isLeaf(node)
     {
@@ -21,10 +22,11 @@
     }
     function selectors(node)
     {
+        var kids = node.data('$$children');
         if(isArray(node))
         {
             var indices = [];
-            for(var i = 0; i < node.length; i++)
+            for(var i = 0; i < kids.length; i++)
             {
                 indices.push(i);
             }
@@ -33,38 +35,31 @@
         if(isObject(node))
         {
             var keys = [];
-            for(var k in node)
+            for(var k in kids)
             {
                 keys.push(k);
             }
             return keys;
         }
     }
-    function parent(tree, target)
+    function parent(tree, node)
     {
-        var sub;
-        if( isArray(tree) ) {
-            for( var i = 0; i < tree.length; i++ ) {
-                if( tree[i] === target ) { return tree; }
-                sub = parent(tree[i], target);
-                if( sub ) { return sub; } }
-            return false; }
-        if( isObject(tree) ) {
-            for( var key in tree ) {
-                if( tree[key] === target ) { return tree; }
-                sub = parent(tree[key], target);
-                if( sub ) { return sub; } }
-            return false; }
+        return node.data('$parent');
     }
-    function child(tree, selector)
+    function child(node, selector)
     {
-        var mel = tree[selector]; // member or element
+        var kids = node.data('$$children');
+        var mel = kids[selector]; // member or element
         if( mel === undefined )
         {
             log('path_error', "could not find element:", sel);
             return {'success':false};
         }
         return {'success':true,'child':mel};
+    }
+    function value(node)
+    {
+        return parseFloat(node.text());
     }
 
     return {
@@ -74,7 +69,7 @@
         'parent'    : parent,
         'child'     : child,
         'selectors' : selectors,
+        'value'     : value,
     };
-
 });
 
