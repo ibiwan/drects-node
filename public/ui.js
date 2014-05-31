@@ -124,21 +124,19 @@
                 type = 'formula';
             }
 
-            var $valuenode = $newdiv(type, data);
-
-            var $editbutton = $newdiv('editbutton', '<i class="' + editicon + '"></i>')
+            var $valuenode = $newdiv(type, data)
+                .addClass('primitive')
                 .data('type',      type)
                 .data('$valuehtml', $valuenode);
 
             var $primstack = $newdiv('primstack',  '')
                 .append($valuenode)
-                .append($editbutton)
                 .addClass("horizontal");
 
             if( type === 'formula' )
             {
-                $editbutton.data('formula', data);
-                formula_nodes.push($editbutton);
+                $primstack.data('formula', data);
+                formula_nodes.push($primstack);
             }
 
             return {'$stack': $primstack, '$valuehtml':$valuenode};
@@ -405,10 +403,13 @@
             if( validator.func(value) ) return true;
             alert(validator.err); return false;
         }
-        var $editbutton   = $(this);
-        var type   = $editbutton.data('type');
 
-        var $displayfield = $editbutton.data('$valuehtml');
+        var $displayfield;
+        if( $(this).hasClass('primitive') ) {
+            $displayfield = $(this);
+        }
+
+        var type   = $displayfield.data('type');
         var parent = $displayfield.parent();
 
         var $typefield = $('<select></select');
@@ -425,7 +426,6 @@
         parent.append($editfield);
 
         $displayfield.hide();
-        $editbutton.hide();
 
         $editfield.keypress(function editkeypress(event){
             if( event.which == 13 ) // return
@@ -439,13 +439,11 @@
                     $typefield.hide();
 
                     $displayfield.show();
-                    $editbutton.show();
 
                     if( changed )
                     {
                         $displayfield.text(value);
                         $displayfield.attr('class', selectedtype);
-                        $editbutton.data('type', selectedtype);
 
                         calculateFormulas();
                         save();
@@ -517,7 +515,7 @@
                 sub.$stack.data('$parent', $htmlroot);
 
                 $('.controller').click(handleToggle);
-                $('.editbutton').click(handleEdit);
+                $('.primitive').dblclick(handleEdit);
 
                 calculateFormulas();
             });
