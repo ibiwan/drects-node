@@ -206,7 +206,6 @@
         } else {
             io.remainder = remainder;
         }
-
         var got = valuegetter(io.context.root, io.context.curr, path, parseparams.allow_star);
         log('path', "got:", got);
 

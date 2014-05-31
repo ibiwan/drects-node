@@ -18,7 +18,6 @@
     }
 })(function($, jqueryui, parser, lex, log){ // init
 
-    var editicon = 'fa fa-pencil-square-o';
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
         'element-close' : 'fa fa-chevron-up',
@@ -126,12 +125,12 @@
 
             var $valuenode = $newdiv(type, data)
                 .addClass('primitive')
-                .data('type',      type)
-                .data('$valuehtml', $valuenode);
+                .data('type',       type);
 
             var $primstack = $newdiv('primstack',  '')
                 .append($valuenode)
-                .addClass("horizontal");
+                .addClass("horizontal")
+                .data('$valuehtml', $valuenode);
 
             if( type === 'formula' )
             {
@@ -397,7 +396,6 @@
                 return false;
             }
 
-            console.log("type:", type);
             var validator = validators[type];
 
             if( validator.func(value) ) return true;
