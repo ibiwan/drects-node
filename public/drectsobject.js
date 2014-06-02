@@ -1,12 +1,12 @@
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
         // node
-        module.exports = init();
+        module.exports = init(require('./log').log);
     } else if ( typeof define === 'function' && define.amd ) {
         // amd (require.js)
-        define([], function () {return init();});
+        define(['./log'], function (log) {return init(log.log);});
     }
-})(function(){ // init
+})(function(log){ // init
 
     function isArray(node)
     {
@@ -49,13 +49,12 @@
     function child(node, selector)
     {
         var kids = node.data('$$children');
-        var mel = kids[selector]; // member or element
-        if( mel === undefined )
+        var c = kids[selector]; // member or element
+        if( c === undefined )
         {
-            log('path_error', "could not find element:", sel);
-            return {'success':false};
+            throw "could not find element: " + c + " in structure: " + node;
         }
-        return {'success':true,'child':mel};
+        return {'success':true, 'child':c};
     }
     function value(node)
     {

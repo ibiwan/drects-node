@@ -125,7 +125,7 @@
 
             var $valuenode = $newdiv(type, data)
                 .addClass('primitive')
-                .data('type',       type);
+                .data('type', type);
 
             var $primstack = $newdiv('primstack',  '')
                 .append($valuenode)
@@ -441,7 +441,8 @@
                     if( changed )
                     {
                         $displayfield.text(value);
-                        $displayfield.attr('class', selectedtype);
+                        $displayfield.attr('class', selectedtype + ' primitive');
+                        $displayfield.data('type', selectedtype);
 
                         calculateFormulas();
                         save();

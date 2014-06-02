@@ -35,8 +35,12 @@
             {
                 values.unshift(type.toUpperCase() + ':');
             }
-            console.log(values);
-            // console.log.apply(this, values); // why did this stop working?
+            for( var i = 0; i < values.length; i++ )
+            {
+                console.log(values[i]);
+            }
+            // console.log(values);
+            // console.log.apply(window, values); // why did this stop working?
         }
     }
 
