@@ -61,34 +61,39 @@
         log('padding', '\n');
     }
 
-    fs.readFile('./dnd.json', function(err, data){
+    fs.readFile('./documents/dnd.json', function(err, data){
         var i;
         var root = JSON.parse(data);
 
         var formula_candidates = [
             {
                 'node'   : root,
-                'text'   : '=sum(/<characters>[*]<levels>[*]<level>)',
+                'text'   : '=sum(/characters/*/levels/*/level)',
                 'result' : {'success':true, 'value':147.7}
             },
             {
                 'node'   : root,
-                'text'   : '=sum(/<characters>[1]<levels>[*]<level>)',
+                'text'   : '=sum(/characters/1/levels/*/level)',
                 'result' : {'success':true, 'value':14.7}
             },
             {
                 'node'   : root,
-                'text'   : '=sum(/<characters>[0]<levels>[*]<level>)',
+                'text'   : '=sum(/characters/0/levels/*/level)',
                 'result' : {'success':true, 'value':133}
             },
             {
                 'node'   : root.characters[0].abilities,
-                'text'   : '=add(max(.parent<levels>[*]<level>), 2)',
+                'text'   : '=add(max(../levels/*/level), 2)',
                 'result' : {'success':true, 'value':134}
             },
             {
                 'node'   : root.characters[0].abilities,
-                'text'   : '=sum(.parent<levels>[*]<level>)',
+                'text'   : '=sum(../levels/*/level)',
+                'result' : {'success':true, 'value':133}
+            },
+            {
+                'node'   : root.characters[0].abilities,
+                'text'   : '=sum(/characters/*/name=exultation/../levels/*/level)',
                 'result' : {'success':true, 'value':133}
             },
         ];

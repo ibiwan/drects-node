@@ -344,7 +344,7 @@
                 if(v[0].token === 'SLASH' || v[0].token === 'BSLASH')
                 {
                     prefix = 'ROOT';
-                    remainder = v.slice(1);
+                    remainder = v; // leave slash for next path section
                 } else if( v[0].token === 'DOT' ) {
                     prefix = 'THIS';
                     if( v[1].token === 'DOT' )

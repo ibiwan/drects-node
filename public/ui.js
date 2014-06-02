@@ -2,16 +2,16 @@
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
         // node
         module.exports = init(
-            require('jquery'),
-            require('jquery-ui'),
-            require('parser'),
-            require('lexer'),
-            require('log').log
+            require('./include/jquery'),
+            require('./include/jquery-ui'),
+            require('./parser'),
+            require('./lexer'),
+            require('./log').log
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // amd (require.js)
         define(
-            ['./jquery', './jquery-ui', './parser', './lexer', './log'],
+            ['jquery', 'jquery-ui', './parser', './lexer', './log'],
             function ($, jqueryui, parser, lexer, log) {
                 return init($, jqueryui, parser, lexer, log.log);
             });
