@@ -34,8 +34,6 @@ handlers = {
 
             var filedata = req.body.file;
 
-            console.log(filedata);
-
             filedata = JSON.stringify(JSON.parse(filedata), null, '  ');
 
             var filename = __dirname + "/documents/saved.json";
