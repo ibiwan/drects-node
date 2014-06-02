@@ -307,17 +307,20 @@
             }
             return ret;
         }
-        switch(htmlnode.attr('class'))
+        if( htmlnode.hasClass('string')  ||
+            htmlnode.hasClass('number')  ||
+            htmlnode.hasClass('boolean') ||
+            htmlnode.hasClass('null')    )
         {
-            case 'string':
-            case 'number':
-            case 'boolean':
-            case 'null':
-                return htmlnode.text();
-            case 'array':
-                return extractarray(htmlnode);
-           case 'object':
-                return extractobject(htmlnode);
+            return htmlnode.text();
+        }
+        if( htmlnode.hasClass('array') )
+        {
+            return extractarray(htmlnode);
+        }
+        if( htmlnode.hasClass('object') )
+        {
+            return extractobject(htmlnode);
         }
     }
 
