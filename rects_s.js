@@ -13,6 +13,7 @@ handlers = {
           console.log("files("+req.params[0]+")");
           res.sendfile(__dirname + '/public/' + req.params[0]);
       },
+  '' : function(req, res){},
   'mainpage' : function mainpage(req, res)
       {
           console.log("mainpage()");

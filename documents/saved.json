@@ -1,0 +1,68 @@
+{
+  "characters": [
+    {
+      "levels": [
+        {},
+        {}
+      ],
+      "abilities": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "vitals": {}
+    },
+    {
+      "levels": [
+        {},
+        {}
+      ],
+      "abilities": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "vitals": {}
+    }
+  ],
+  "array-of-arrays": [
+    [
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null
+    ]
+  ],
+  "rex-ordering": [
+    "name",
+    "player",
+    "levels",
+    "class",
+    "level",
+    "abilities",
+    "BAB",
+    "skills",
+    "OTHER",
+    "prestige"
+  ],
+  "rex-primaries": {
+    "abilities": "ability",
+    "characters": "name",
+    "levels": "class"
+  }
+}
