@@ -15,10 +15,6 @@
     var puncts_dict = {
         '('  : 'LPAREN',
         ')'  : 'RPAREN',
-        '['  : 'LBRACK',
-        ']'  : 'RBRACK',
-        '<'  : 'LCHEV',
-        '>'  : 'RCHEV',
         '='  : 'EQUALS',
         ','  : 'COMMA',
         '*'  : 'STAR',
@@ -27,6 +23,7 @@
         '/'  : 'SLASH',
         '\\' : 'BSLASH',
         '\'' : 'QUOTE',
+        '"'  : 'DQUOTE',
     };
     var puncts_str = {};
     for(var key in puncts_dict)
@@ -37,7 +34,6 @@
 
     var reserveds = {
         'NULL'      : ['null'],
-        'PARENT'    : ['parent'],
         'BOOL'      : ['true', 'false'],
     };
 
@@ -86,12 +82,13 @@
     {
         var chars = haystack.split('');
         var substr = [];
+        var open_quote = chars[0];
         for(var i = 0; i < chars.length; i++)
         {
             var c = chars[i];
             if( i === 0 )
             {
-                if( c !== "'" ) throw "lex error: string must start with single quote";
+                if( c !== "'" && c !== '"') throw "lex error: string must start with single or double quote";
             }
             if( c === '\\' ) // escape!
             {
@@ -104,8 +101,12 @@
                 substr.push(c);
                 continue;
             }
-            if( c === "'" ) // end of string
+            if( c === "'" || c === '"') // end of string
             {
+                if( c !== open_quote )
+                {
+                    continue; // must close with same quote type as opened
+                }
                 var ret = substr.join('');
                 return {'string':substr.join(''), 'end_index':i};
             }
@@ -122,7 +123,9 @@
         for(var i = 0; i < str.length; i++)
         {
             var c = str.substr(i, 1);
-            if( c === "'" )
+
+            // string literal, enclosed in quotes
+            if( c === "'" || c === '"')
             {
                 var ls = lexstring(str.substr(i));
                 i += ls.end_index;

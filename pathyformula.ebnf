@@ -1,0 +1,42 @@
+formula       = EQUALS, scalar;
+
+scalar        = number
+              | STRING
+              | BOOL
+              | NULL
+              | path
+              | fn_call;
+
+number        = [NEG], DIGITS, [DOT, DIGITS];
+
+fn_call       = UNARY,     LPAREN, unary_params,  RPAREN
+              | BINARY,    LPAREN, binary_params, RPAREN
+              | MIXED,     LPAREN, mixed_params,  RPAREN
+              | AGGREGATE, LPAREN, aggr_params,   RPAREN;
+
+unary_params  = scalar;
+binary_params = scalar, COMMA, scalar;
+mixed_params  = scalar, COMMA, tensor;
+aggr_params   = tensor;
+
+tensor        = path;
+
+path          = starter, subpath;
+starter       = [DOT], DOT
+              | path_delim;
+subpath       = path_delim, path_select, [subpath];
+
+path_delim    = SLASH | BSLASH;
+path_select   = DIGITS
+              | LABEL
+              | STAR
+              | DOT, DOT;
+
+simple symbols from lexer:
+      LPAREN, RPAREN, BOOL, NULL
+      EQUALS, COMMA, STAR, DOT, NEG,
+      SLASH, BSLASH, QUOTE, DQUOTE
+
+tagged symbols from lexer:
+      LABEL, DIGITS, STRING,
+      UNARY, BINARY, AGGREGATE, MIXED

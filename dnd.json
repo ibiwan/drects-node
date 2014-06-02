@@ -84,7 +84,7 @@
         }
       ],
       "name": "kahlan",
-      "totallevels": "=sum(.parent<levels>[*]<level>)",
+      "totallevels": "=sum(../levels/*/level)",
       "vitals": {
         "age": "22 years",
         "height": "5 ' 7\"",

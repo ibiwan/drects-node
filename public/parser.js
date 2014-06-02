@@ -16,7 +16,7 @@
             });
     }
 })(function(lex, functions, o, log){ // init
-    function valuegetter(root_node, curr_node, path_elements, allow_star)
+    function valuegetter(root_node, curr_node, path_elements)
     {
         log('path', "valuegetter:", path_elements, curr_node);
 
@@ -29,32 +29,25 @@
             log('debug', "returning curr_node:", curr_node);
             return o.value(curr_node);
         }
-        var s;
         var t = path_elements[0].type;
-        var sel = path_elements[0].selector;
         var subpath = path_elements.slice(1);
         switch(t)
         {
             case 'THIS':
+                return valuegetter(root_node, curr_node, subpath);
             case 'ROOT':
-                return valuegetter(root_node, (t === 'THIS' ? curr_node : root_node), subpath, allow_star);
-            case 'MEMBER':
-            case 'ELEMENT':
-                if( allow_star && sel === '(STAR)' )
+                return valuegetter(root_node, root_node, subpath);
+            case 'PARENT':
+                return valuegetter(root_node, o.parent(root_node, curr_node), subpath);
+            case 'CHILD':
+                var sel = path_elements[0].selector;
+                if( sel === '(STAR)' ) // (star)
                 {
-                    if(t === 'MEMBER' && !o.isObject(curr_node) )
-                    {
-                        throw "type error: attempted to get members of a non-object";
-                    }
-                    if(t === 'ELEMENT' && !o.isArray(curr_node) )
-                    {
-                        throw "type error: attempted to get elements of a non-array";
-                    }
                     var ret = [];
-                    for(s in o.selectors(curr_node))
+                    for( var s in o.selectors(curr_node) )
                     {
-                        var e = o.child(curr_node,s);
-                        var elements = valuegetter(root_node, e.child, subpath, allow_star);
+                        var e = o.child(curr_node, s);
+                        var elements = valuegetter(root_node, e.child, subpath);
                         log('debug', "got elements:", elements);
                         ret = ret.concat(elements);
                     }
@@ -62,11 +55,9 @@
                     return ret;
                 } else {
                     var mel = o.child(curr_node,sel);
-                    return valuegetter(root_node, mel.child, subpath, allow_star);
+                    return valuegetter(root_node, mel.child, subpath);
                 }
                 break; // should have already hit a "return" in all cases
-            case 'PARENT':
-                return valuegetter(root_node, o.parent(root_node, curr_node), subpath, allow_star);
             default:
                 throw "path error: unknown path element type:" + t;
         }
@@ -123,97 +114,6 @@
             log('debug', "returning from params_helper():", io);
             return true;
         }
-    }
-
-    function subpath_helper(v, io, params)
-    {
-        log('parse', params.label, v[0]);
-
-        var path = [];
-        var remainder = v;
-
-        var allow = ( params.allow_star ) ? ['STAR'] : [];
-        switch( v[0].token )
-        {
-            case lex.punct.DOT:
-            log('parse', "v1:", v[1]);
-                asserttoken(v, 1, 'PARENT', 'DOT must be followed by "parent"');
-                path.push({'type':'PARENT', 'selector':null});
-                remainder = v.slice(2);
-                break;
-            case lex.punct.LBRACK: // brackets for index
-                allow.push('DIGITS');
-                asserttokens(v, 1, allow, params.index_error);
-                asserttoken(v, 2, lex.punct.RBRACK, 'right bracket expected to finish index');
-                path.push({'type':'ELEMENT', 'selector':v[1].tag}); // null for star
-                remainder = v.slice(3);
-                break;
-            case lex.punct.LCHEV:  // chevrons for key
-                allow.push('LABEL');
-                asserttokens(v, 1, allow, params.label_error);
-                asserttoken(v, 2, lex.punct.RCHEV, 'right chevron expected to finish key');
-                path.push({'type':'MEMBER', 'selector':v[1].tag}); // null for star
-                remainder = v.slice(3);
-                break;
-            default:
-                throw "parse error: subpath should start with one of: < [ .";
-        }
-
-        if(remainder.length > 0)
-        {
-            var prod = params.subprod;
-            var i = prod.prefixes().indexOf(remainder[0].token);
-            if( i > -1 )
-            {
-                var path_io = {'context':io.context};
-                prod.parse(remainder, path_io);
-
-                path = path.concat(path_io.path);
-                remainder = path_io.remainder;
-            }
-        }
-
-        io.path = path;
-        io.remainder = remainder;
-    }
-
-    function path_helper(v, io, parseparams)
-    {
-        log('parse', parseparams.label, v[0]);
-
-        var prefix, remainder;
-
-        if(v[0].token === 'SLASH')
-        {
-            prefix = 'ROOT';
-            remainder = v.slice(1);
-        } else {
-            prefix = 'THIS';
-            remainder = v;
-        }
-        var path = [ {'type':prefix, 'selector':null} ];
-
-        var prod = parseparams.prod;
-
-        var j = prod.prefixes().indexOf(remainder[0].token);
-        if( j > -1 )
-        {
-            var path_io = {'context':io.context};
-            prod.parse(remainder, path_io);
-
-            path = path.concat(path_io.path);
-            io.remainder = path_io.remainder;
-        } else {
-            io.remainder = remainder;
-        }
-        var got = valuegetter(io.context.root, io.context.curr, path, parseparams.allow_star);
-        log('path', "got:", got);
-
-        io.value = got;
-        io.remainder = io.remainder;
-
-        log('debug', "returning from path_helper():", io);
-        return true;
     }
 
     productions = {
@@ -299,7 +199,7 @@
             'parse'    : function p_aggregate_params_parse(v, io) {
                 return params_helper(v, io, {
                     'label':'aggregate_params:',
-                    'first_prod' : productions.p_tensor_path,
+                    'first_prod' : productions.p_path,
                 });
             },
         },
@@ -319,7 +219,7 @@
                 return params_helper(v, io, {
                     'label':'mixed_params:',
                     'first_prod' : productions.p_scalar,
-                    'second_prod': productions.p_tensor_path,
+                    'second_prod': productions.p_path,
                 });
             },
         },
@@ -330,7 +230,6 @@
             'apply'    : function p_unary_parse(fname, params){
                 log('apply', 'p_unary:');
                 var p = params.value.param1;
-                // log('path', params.context);
                 if( p === undefined )
                 {
                     log('type_error', "can't apply function '" + fname + "' to param: ", p);
@@ -388,59 +287,98 @@
                 return functions.aggregate[fname](p);
             }
         },
-        'p_scalar_subpath' : {
-            'cases'    : p_scalar_subpath_prefixes = [lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
-            'prefixes' : function get_p_scalar_subpath_prefixes(){return p_scalar_subpath_prefixes;},
-            'parse'    : function p_scalar_subpath_parse(v, io) {
-                params = {
-                    'label'         : 'scalar_subpath:',
-                    'allow_star'    : false,
-                    'label_error'   : 'label expected as key',
-                    'index_error'   : 'digits expected as index',
-                    'subprod'       : productions.p_scalar_subpath,
-                };
-                return subpath_helper(v, io, params);
+        'p_subpath' : {
+            'cases'    : p_subpath_prefixes = [lex.punct.SLASH, lex.punct.BSLASH],
+            'prefixes' : function get_p_subpath_prefixes(){return p_subpath_prefixes;},
+            'parse'    : function p_subpath_parse(v, io) {
+                log('parse', "subpath:", v[0]);
+
+                asserttokens(v, 0, p_subpath_prefixes, "subpath must start with slash");
+                asserttokens(v, 1,
+                    [ lex.punct.DOT, 'DIGITS', 'LABEL', lex.punct.STAR ],
+                    "subpath must specify index, key, all (*), or parent (..)");
+
+                var path = [];
+                switch( v[1].token )
+                {
+                    case lex.punct.DOT:
+                        asserttoken(v, 2, lex.punct.DOT, "single dot in subpath doesn't make sense...")
+                        path.push({'type':'PARENT', 'selector':null});
+                        remainder = v.slice(3);
+                        break;
+                    case 'DIGITS':
+                    case 'LABEL':
+                    case lex.punct.STAR:
+                        path.push({'type':'CHILD', 'selector':v[1].tag});
+                        remainder = v.slice(2);
+                        break;
+                }
+
+                if(remainder.length > 0)
+                {
+                    var i = productions.p_subpath.prefixes().indexOf(remainder[0].token);
+                    if( i > -1 )
+                    {
+                        var path_io = {'context':io.context};
+                        productions.p_subpath.parse(remainder, path_io);
+
+                        path = path.concat(path_io.path);
+                        remainder = path_io.remainder;
+                    }
+                }
+
+                io.path = path;
+                io.remainder = remainder;
             },
         },
-        'p_tensor_subpath' : {
-            'cases'    : p_tensor_subpath_prefixes = [lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
-            'prefixes' : function get_p_tensor_subpath_prefixes(){return p_tensor_subpath_prefixes;},
-            'parse'    : function p_tensor_subpath_parse(v, io) {
-                params = {
-                    'label'         : 'tensor_subpath:',
-                    'allow_star'    : true,
-                    'label_error'   : 'label or * expected as key',
-                    'index_error'   : 'digits or * expected as index',
-                    'subprod'       : productions.p_tensor_subpath,
-                };
-                return subpath_helper(v, io, params);
-            },
-        },
-        'p_scalar_path' : {
-            'cases'    : p_scalar_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
-            'prefixes' : function get_p_scalar_path_prefixes(){return p_scalar_path_prefixes;},
-            'parse'    : function p_scalar_path_parse(v, io) {
-                return path_helper(v, io, {
-                    'label'      : "scalar path:",
-                    'prefixes'   : p_scalar_path_prefixes,
-                    'error1'     : 'scalar path must start with one of: [ < . /',
-                    'prod'       : productions.p_scalar_subpath,
-                    'allow_star' : false,
-                });
-            },
-        },
-        'p_tensor_path' : {
-            'cases'    : p_tensor_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.LBRACK, lex.punct.LCHEV],
-            'prefixes' : function get_p_tensor_path_prefixes(){return p_tensor_path_prefixes;},
-            'parse'    : function p_tensor_path_parse(v, io) {
-                return path_helper(v, io, {
-                    'label'      : "tensor path:",
-                    'prefixes'   : p_tensor_path_prefixes,
-                    'error1'     : 'tensor path must start with one of: [ < . /',
-                    'prod'       : productions.p_tensor_subpath,
-                    'allow_star' : true,
-                });
-            },
+        'p_path' : {
+            'cases'    : p_path_prefixes = [lex.punct.SLASH, lex.punct.DOT, lex.punct.BSLASH],
+            'prefixes' : function get_p_path_prefixes(){return p_path_prefixes;},
+            'parse'    : function p_path_parse(v, io) {
+                log('parse', "path:", v[0]);
+
+                asserttokens(v, 0, p_path_prefixes, "path must start with one of: " + p_path_prefixes.join(" "));
+
+                var prefix, remainder, addparent = false;
+
+                if(v[0].token === 'SLASH' || v[0].token === 'BSLASH')
+                {
+                    prefix = 'ROOT';
+                    remainder = v.slice(1);
+                } else if( v[0].token === 'DOT' ) {
+                    prefix = 'THIS';
+                    if( v[1].token === 'DOT' )
+                    {
+                        addparent = true;
+                        remainder = v.slice(2);
+                    } else {
+                        remainder = v.slice(1);
+                    }
+                }
+                var path = [ {'type':prefix, 'selector':null} ];
+                if( addparent )
+                {
+                    path.push( {'type':'PARENT', 'selector':null} );
+                }
+
+                // parse subpath
+
+                var path_io = {'context':io.context};
+
+                productions.p_subpath.parse(remainder, path_io);
+
+                path = path.concat(path_io.path);
+                io.remainder = path_io.remainder;
+
+                var got = valuegetter(io.context.root, io.context.curr, path);
+                log('path', "got:", got);
+
+                io.value = got;
+                io.remainder = io.remainder;
+
+                log('debug', "returning from path_helper():", io);
+                return true;
+            }
         },
         'p_function_call' : {
             'cases'    : p_function_call_cases = ['p_unary','p_binary','p_mixed','p_aggregate'],
@@ -494,7 +432,7 @@
             },
         },
         'p_scalar' : {
-            'cases'    : p_scalar_cases = ['p_number', 'p_string', 'p_bool', 'p_null', 'p_scalar_path', 'p_function_call'],
+            'cases'    : p_scalar_cases = ['p_number', 'p_string', 'p_bool', 'p_null', 'p_path', 'p_function_call'],
             'prefixes' : function get_p_scalar_prefixes(){
                 var ret = [];
                 for(var i = 0; i < p_scalar_cases.length; i++)
@@ -527,15 +465,15 @@
             'parse'    : function p_formula_parse(v, io) {
                 log('parse', "formula:", v[0]);
 
-                if( !v[0] || v[0].token !== lex.punct.EQUALS )
-                {
-                    throw "parse error: formula must start with " + lex.punct.EQUALS;
-                }
+                asserttoken(v, 0, lex.punct.EQUALS, "formula must start with =");
 
                 var scalar_io = {'context':io.context};
+
                 productions.p_scalar.parse(v.slice(1), scalar_io);
+
                 io.value     = scalar_io.value;
                 io.remainder = scalar_io.remainder;
+
                 if( scalar_io.remainder.length > 0 )
                 {
                     throw "parse error: didn't expect anything after formula, got:" + scalar_io.remainder;
