@@ -16,7 +16,7 @@
       ],
       "abilities": [
         {
-          "ability": "Strength",
+          "ability": "Str",
           "total": "20"
         },
         {
@@ -51,7 +51,7 @@
       "levels": [
         {
           "class": "rogue",
-          "level": "12"
+          "level": "15"
         },
         {
           "class": "assassin",

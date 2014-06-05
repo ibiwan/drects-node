@@ -2,18 +2,21 @@
 
 var fs         = require('fs');
 
-// npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt
+// npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt csurf handlebars
 var express    = require('express');
-var bodyParser = require('body-parser');
-var morgan     = require('morgan');
-var sqlite3    = require('sqlite3').verbose();
-var cookie     = require('cookie-parser');
-var session    = require('express-session');
-var password   = require('password-hash-and-salt');
 
-// // // express-csrf (ignore until I figure out how to use)
-// var csrf       = require('csurf');
-// console.log(csrf);
+// middlewarez
+var bodyParser = require('body-parser')();
+var morgan     = require('morgan')('dev');
+var cookie     = require('cookie-parser')();
+var session    = require('express-session');
+// var csrf       = require('csurf')();
+var csrf = function(a, b, next){next()};
+
+// libraries
+var sqlite3    = require('sqlite3').verbose();
+var password   = require('password-hash-and-salt');
+var handlebars = require('handlebars');
 
 function makesecret()    //pseudorandom!
 {
@@ -62,6 +65,15 @@ function setupServer(secret, db)
         else next();
     }
 
+    function renderLogin(req, res, message)
+    {
+        fs.readFile(__dirname + '/login.html', function(err, data){
+            if( err ) throw new Exception(err);
+            var template = handlebars.compile(data.toString());
+            res.send(template({'message':message}));
+        });
+    }
+
     var handlers = {
         'landing'  : function landing(req, res)
             {
@@ -70,7 +82,7 @@ function setupServer(secret, db)
                 if( !req.session.userid )
                 {
                     // if not logged in, present form
-                    return res.sendfile(__dirname + '/login.html', function(err){console.log(err);});
+                    return renderLogin(req, res, '');
                 }
 
                 if( req.session.filename )
@@ -87,6 +99,7 @@ function setupServer(secret, db)
                 console.log("login()");
                 // accepts form results and checks authentication.
                 if ( !(req.body && req.body.user && req.body.password) ) {
+                    console.log("no user/pass offered");
                     return res.redirect('/');
                 }
                 var user = req.body.user;
@@ -99,7 +112,7 @@ function setupServer(secret, db)
                     {
                         // if username fail, present retry form
                         console.log("unknown user:", user);
-                        return res.sendfile(__dirname + '/tryagain.html', function(err){console.log(err);});
+                        return renderLogin(req, res, 'Unknown user or bad password; please try again.');
                     }
 
                     // user exists; check password
@@ -109,7 +122,7 @@ function setupServer(secret, db)
                         if(!verified) {
                             // if password fail, present retry form
                             console.log("bad password for user:", user);
-                            return res.sendfile(__dirname + '/tryagain.html', function(err){console.log(err);});
+                            return renderLogin(req, res, 'Unknown user or bad password; please try again.');
                         }
                         // if success, log in and redirect to landing
                         console.log("user logged in:", user);
@@ -177,8 +190,6 @@ function setupServer(secret, db)
                     req.session.filename = 'dnd.json';
                 }
                 res.sendfile(__dirname + "/documents/" + req.session.filename, function(err){if(err)console.log(err);});
-                // res.sendfile(__dirname + "/documents/dnd.json", function(err){console.log(err);});
-                // res.sendfile(__dirname + "/documents/reports.json", function(err){console.log(err);});
             },
         'savedoc' : function savedoc(req, res)
             {
@@ -202,32 +213,29 @@ function setupServer(secret, db)
         'favicon' : function favicon(req, res) { res.send(404, 'No favicon'); },
     };
 
+    var publicRoutes = express.Router()
+        .get ('/',                        handlers.landing)
+        .post('/login', bodyParser, csrf, handlers.login)
+        .get ('/files/*',                 handlers.files)
+        .get ('/favicon.ico',             handlers.favicon);
+
+    var privateRoutes = express.Router()
+        .use(denyAnon)
+        .get ('/logout',                    handlers.logout)
+        .get ('/listdocs',                  handlers.listdocs)
+        .get ('/viewer',                    handlers.viewer)
+        .get ('/viewer/:filename',          handlers.viewer)
+        .get ('/getdoc',                    handlers.getdoc)
+        .post('/savedoc', bodyParser, csrf, handlers.savedoc);
+
     var port = 1338;
     var app = express()
-        .use(morgan('dev')) // automatic logging ftw
-        .use(cookie())
+        .use(morgan) // automatic logging ftw
+        .use(cookie)
         .use(session({secret: secret}))
 
-        // .use(csrf())
-        // .use(function (req, res, next) {
-        //     res.cookie('XSRF-TOKEN', req.csrfToken());
-        //     res.locals.csrftoken = req.csrfToken();
-        //     next();
-        //     })
-
-        .get('/',                       handlers.landing)
-        .post('/login',   bodyParser(), handlers.login)
-        .get('/files/*',                handlers.files)
-        .get('/favicon.ico',            handlers.favicon)
-
-        .use(denyAnon) // endpoints below require valid session
-
-        .get('/logout',                 handlers.logout)
-        .get('/viewer',                 handlers.viewer)
-        .get('/viewer/:filename',       handlers.viewer)
-        .get('/listdocs',               handlers.listdocs)
-        .get('/getdoc',                 handlers.getdoc)
-        .post('/savedoc', bodyParser(), handlers.savedoc)
+        .use(publicRoutes)
+        .use(privateRoutes)
 
         .listen(port);
 
