@@ -1,0 +1,23 @@
+version
+    id
+    datetime
+    content
+    parent      (version.id)
+
+document
+    id
+    owner       (user.id)
+    filename
+    latest      (version.id)
+    archived
+
+user
+    id
+    login
+    passhash
+    full_name
+
+session
+    owner       (user.id)
+    created
+    token
