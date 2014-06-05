@@ -56,68 +56,67 @@ function setupSessionSecret()
 
 function setupServer(secret, db)
 {
-    function login_help(req, res)
+    function denyAnon(req, res, next)
     {
-        // if success, log in and redirect to landing
-        // if fail, present retry form
-
-        var user = req.body.user;
-        var pass = req.body.password;
-
-        console.log("login attempted:", user, pass);
-
-        db.get("SELECT * FROM user WHERE username = ?", [user], function(err, row){
-            if(row) // user exists; check password
-            {
-                password(pass).verifyAgainst(row.passhash, function(error, verified) {
-                    if(error) { throw new Error(error); }
-
-                    if(verified) {
-                        console.log("user logged in:", user);
-                        req.session.userid = row.id;
-                        res.redirect('/');
-                    } else {
-                        console.log("bad password for user:", user);
-                        res.sendfile(__dirname + '/tryagain.html', function(err){console.log(err);});
-                        return;
-                    }
-                });
-            } else {
-                console.log("unknown user:", user);
-                res.sendfile(__dirname + '/tryagain.html', function(err){console.log(err);}); // no user with that name found
-                return;
-            }
-        });
+        if( ! req.session.userid ) { return res.redirect('/'); } // requires session
+        else next();
     }
 
     var handlers = {
         'landing'  : function landing(req, res)
             {
                 console.log("landing()");
-                if( req.session.userid )
+
+                if( !req.session.userid )
                 {
-                    if( req.session.filename )
-                    {
-                        // if logged in, with file set, redirect to viewer
-                        return res.redirect('/viewer');
-                    } else {
-                        // if logged in with no file set, redirect to listdocs
-                        return res.redirect('/listdocs');
-                    }
-                } else {
                     // if not logged in, present form
                     return res.sendfile(__dirname + '/login.html', function(err){console.log(err);});
+                }
+
+                if( req.session.filename )
+                {
+                    // if logged in, with file set, redirect to viewer
+                    return res.redirect('/viewer');
+                } else {
+                    // if logged in with no file set, redirect to listdocs
+                    return res.redirect('/listdocs');
                 }
             },
         'login'    : function login(req, res)
             {
                 console.log("login()");
                 // accepts form results and checks authentication.
-                if ( req.body && req.body.user && req.body.password ) {
-                    return login_help(req, res);
-                } else {
+                if ( !(req.body && req.body.user && req.body.password) ) {
                     return res.redirect('/');
                 }
+                var user = req.body.user;
+                var pass = req.body.password;
+
+                console.log("login attempted:", user, pass);
+
+                db.get("SELECT * FROM user WHERE username = ?", [user], function(err, row){
+                    if(!row)
+                    {
+                        // if username fail, present retry form
+                        console.log("unknown user:", user);
+                        return res.sendfile(__dirname + '/tryagain.html', function(err){console.log(err);});
+                    }
+
+                    // user exists; check password
+                    password(pass).verifyAgainst(row.passhash, function(error, verified) {
+                        if(error) { throw new Error(error); }
+
+                        if(!verified) {
+                            // if password fail, present retry form
+                            console.log("bad password for user:", user);
+                            return res.sendfile(__dirname + '/tryagain.html', function(err){console.log(err);});
+                        }
+                        // if success, log in and redirect to landing
+                        console.log("user logged in:", user);
+                        req.session.userid = row.id;
+                        return res.redirect('/');
+                    });
+                });
             },
         'logout'   : function logout(req, res)
             {
@@ -141,8 +140,6 @@ function setupServer(secret, db)
             {
                 console.log("listdocs()");
 
-                if( ! req.session.userid ) { return res.redirect('/'); } // requires session
-
                 // present list of available files for user.
                 fs.readdir(__dirname + '/documents', function(err, files){
                     var out = '';
@@ -158,8 +155,6 @@ function setupServer(secret, db)
             {
                 console.log("viewer()");
 
-                if( ! req.session.userid ) { return res.redirect('/'); } // requires session
-
                 // if no file selected via params OR session, redirect to listdocs, else serve viewer
                 if( req.params.filename )
                 {
@@ -173,8 +168,6 @@ function setupServer(secret, db)
             {
                 // JSON responder; serve requested file or default file
                 console.log("getdoc()");
-
-                if( ! req.session.userid ) { return res.redirect('/'); } // requires session
 
                 if( req.session.filename )
                 {
@@ -191,8 +184,6 @@ function setupServer(secret, db)
             {
                 console.log("savedoc()");
 
-                if( ! req.session.userid ) { return res.redirect('/'); } // requires session
-
                 var filedata = req.body.file;
 
                 filedata = JSON.stringify(JSON.parse(filedata), null, '  ');
@@ -207,35 +198,39 @@ function setupServer(secret, db)
                         res.json(200, {'success':true});
                     }
                 });
-            }
+            },
+        'favicon' : function favicon(req, res) { res.send(404, 'No favicon'); },
     };
 
     var port = 1338;
     var app = express()
-        .use(morgan('dev'))
+        .use(morgan('dev')) // automatic logging ftw
         .use(cookie())
         .use(session({secret: secret}))
+
         // .use(csrf())
         // .use(function (req, res, next) {
         //     res.cookie('XSRF-TOKEN', req.csrfToken());
         //     res.locals.csrftoken = req.csrfToken();
         //     next();
         //     })
+
         .get('/',                       handlers.landing)
+        .post('/login',   bodyParser(), handlers.login)
+        .get('/files/*',                handlers.files)
+        .get('/favicon.ico',            handlers.favicon)
+
+        .use(denyAnon) // endpoints below require valid session
+
         .get('/logout',                 handlers.logout)
         .get('/viewer',                 handlers.viewer)
         .get('/viewer/:filename',       handlers.viewer)
         .get('/listdocs',               handlers.listdocs)
-        .get('/files/*',                handlers.files)
         .get('/getdoc',                 handlers.getdoc)
-
-        .post('/login',   bodyParser(), handlers.login)
         .post('/savedoc', bodyParser(), handlers.savedoc)
 
-        .get('/favicon.ico', function(req, res){
-            res.send(404, 'No favicon');
-        })
         .listen(port);
+
     console.log("listening on ", port);
 }
 
