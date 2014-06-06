@@ -11,7 +11,7 @@ var morgan     = require('morgan')('dev');
 var cookie     = require('cookie-parser')();
 var session    = require('express-session');
 // var csrf       = require('csurf')();
-var csrf = function(a, b, next){next()};
+var csrf = function(a, b, next){next();};
 
 // libraries
 var sqlite3    = require('sqlite3').verbose();
@@ -67,7 +67,7 @@ function setupServer(secret, db)
 
     function renderLogin(req, res, message)
     {
-        fs.readFile(__dirname + '/login.html', function(err, data){
+        fs.readFile(__dirname + '/templates/login.html', function(err, data){
             if( err ) throw new Exception(err);
             var template = handlebars.compile(data.toString());
             res.send(template({'message':message}));
@@ -175,7 +175,7 @@ function setupServer(secret, db)
                     return res.redirect('/viewer');
                 }
 
-                res.sendfile(__dirname + "/viewer.html", function(err){console.log(err);});
+                res.sendfile(__dirname + "/templates/viewer.html", function(err){console.log(err);});
             },
         'getdoc' : function getdoc(req, res)
             {
