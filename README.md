@@ -41,6 +41,8 @@ The user can select an existing document to open, or (soon) select an option to 
 
 ASSUMING the user has the file they want open, they will see the file's contents displayed in a nice, intelligently-rendered heirarchy.  Any level of the heirarchy can be collapsed individually with the chevron icon by that subtree's title.  Arrays' elements are titled by integer indices, and Objects' by string keys.
 
+![sample viewer](https://github.com/ibiwan/drects-node/blob/master/screenshots/main-viewer.png)
+
 Any field can be edited by double-clicking the displayed value, which displays up a drop-down menu of available variable types, and an editing field for the value.  After hitting enter, the field is validated, and if valid, the file is saved to the server.  For now, the file is saved to "saved.json" instead of overwriting the original.
 
 #### Formulas
@@ -84,6 +86,7 @@ I've got lots of [hopes](https://github.com/ibiwan/drects-node/issues) for where
 - the ability to use data from external sources
 - user management capabilities
 - full document change histories
+- add support for Firefox; for now only works in Chrome and Safari
 
 =====
 
