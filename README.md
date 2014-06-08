@@ -1,4 +1,4 @@
-Dynamisaurus Rects, implemented in Node.js
+## Dynamisaurus Rects, implemented in Node.js
 
 - [Concept](#user-content-concept)
     - [Problem](#user-content-problem)
@@ -84,6 +84,7 @@ I've got lots of [hopes](https://github.com/ibiwan/drects-node/issues) for where
 - the ability to use data from external sources
 - user management capabilities
 - full document change histories
+
 =====
 
 Table of Contents generated with [DocToc](http://doctoc.herokuapp.com/)
