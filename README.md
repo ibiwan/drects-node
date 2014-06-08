@@ -51,8 +51,8 @@ ASSUMING the user has the file they want open, they will see the file's contents
 
 Any field can be edited by double-clicking the displayed value, which displays up a drop-down menu of available variable types, and an editing field for the value.  After hitting enter, the field is validated, and if valid, the file is saved to the server.  For now, the file is saved to "saved.json" instead of overwriting the original.
 
-[field editing](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/field-editing.png "field editing")
-[type selection](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/type selection.png "type selection")
+![field editing](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/field-editing.png "field editing")
+![type selection](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/type-selection.png "type selection")
 
 #### Formulas
 
