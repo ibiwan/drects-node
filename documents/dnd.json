@@ -105,13 +105,8 @@
     "prestige"
   ],
   "rex-primaries": {
-    "abilities": "ability",
-    "characters": "name",
-    "levels": "class"
-  },
-  "array-of-arrays": [
-    [1, 2, 3],
-    ["a", "b", "c"],
-    [true, false, true]
-  ]
+    "abilities"  : "ability",
+    "characters" : "name",
+    "levels"     : "class"
+  }
 }

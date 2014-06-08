@@ -6,8 +6,9 @@ Dynamisaurus Rects, implemented in Node.js
 
 #### Problem
 
-Spreadsheet solutions like Excel and Google Docs are focused on tabular data, so anything compiled more of small arrays and scalar values requires careful layout and risk of broken cell references when changes are made in remote locations in the file.  Database solutions like MySQL, MS Access, and Filemaker require extensive schema design, programming, infrastructure, and maintenance.  
+Spreadsheet solutions like Excel and Google Docs are focused on tabular data, so anything compiled more of small arrays and scalar values requires careful layout and risk of broken cell references when changes are made in remote locations in the file.  
 
+On the other hand, database solutions like MySQL, MS Access, and Filemaker require extensive schema design, programming, infrastructure, and maintenance.  
 #### Solution
 
 Using [json](http://www.json.org/) as a document storage format, implement a flexible viewer for arbitrarily-structured data.  Allow WYSIWYG editing of all fields, objects, arrays, and keys.  Allow strings, numeric values, booleans, empty fields, and formulas.  Calculate formulas much like Excel does, so that changes are reflected in real-time.  Cell references use a filename-like syntax that allows for both absolute paths and paths relative to the formula cell.  This level of complexity strikes a sweet spot between the Excel and Access families, allowing for non-tabular data, that can still be edited and calculated by non-programmers.
@@ -34,7 +35,7 @@ Any field can be edited by double-clicking the displayed value, which displays u
 
 #### Formulas
 
-A `formula` field contains a string starting with `=`, and consists of any combination of cell references or built-in functions acting on them.  
+A `formula` field contains a string starting with `=`, and consists of any combination of literal values or cell references, or built-in functions acting on them.  
 
 Examples:
 - `=sum(../levels/*/level)`
@@ -66,7 +67,7 @@ Certain objects can be added to the root level of the document, to customize the
 - See "Usage" section above for further directions
 
 ### Direction
-I've got lots of hopes for where to take this.  Besides the editing capabilities mentioned above, I'd like to have:
+I've got lots of [hopes](https://github.com/ibiwan/drects-node/issues) for where to take this.  Besides the editing capabilities mentioned above, I'd like to have:
 - upload/download
 - collaboration and sharing
 - more built-in functions and function categories
