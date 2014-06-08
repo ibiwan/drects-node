@@ -1,3 +1,5 @@
+#!/usr/local/bin/node
+
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
         // node

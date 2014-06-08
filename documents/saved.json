@@ -51,7 +51,7 @@
       "levels": [
         {
           "class": "rogue",
-          "level": "13"
+          "level": "12"
         },
         {
           "class": "assassin",
@@ -84,6 +84,7 @@
           "total": "15"
         }
       ],
+      "totallevels": "14.7",
       "vitals": {
         "age": "22 years",
         "height": "5 ' 7\"",
