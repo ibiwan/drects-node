@@ -1,5 +1,18 @@
 Dynamisaurus Rects, implemented in Node.js
 
+**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
+
+- [](#undefined)
+        - [Concept](#user-content-concept)
+            - [Problem](#user-content-problem)
+            - [Solution](#user-content-solution)
+        - [Usage](#user-content-usage)
+            - [Formulas](#user-content-formulas)
+            - [Future editing capabilities:](#user-content-future-editing-capabilities)
+            - [Per-document preferences](#user-content-per-document-preferences)
+        - [Installation](#user-content-installation)
+        - [Direction](#user-content-direction)
+
 ===========
 
 ### Concept
