@@ -1,17 +1,14 @@
 Dynamisaurus Rects, implemented in Node.js
 
-**Table of Contents**  *generated with [DocToc](http://doctoc.herokuapp.com/)*
-
-- [](#undefined)
-        - [Concept](#user-content-concept)
-            - [Problem](#user-content-problem)
-            - [Solution](#user-content-solution)
-        - [Usage](#user-content-usage)
-            - [Formulas](#user-content-formulas)
-            - [Future editing capabilities:](#user-content-future-editing-capabilities)
-            - [Per-document preferences](#user-content-per-document-preferences)
-        - [Installation](#user-content-installation)
-        - [Direction](#user-content-direction)
+- [Concept](#user-content-concept)
+    - [Problem](#user-content-problem)
+    - [Solution](#user-content-solution)
+- [Usage](#user-content-usage)
+    - [Formulas](#user-content-formulas)
+    - [Future editing capabilities:](#user-content-future-editing-capabilities)
+    - [Per-document preferences](#user-content-per-document-preferences)
+- [Installation](#user-content-installation)
+- [Direction](#user-content-direction)
 
 ===========
 
@@ -87,5 +84,7 @@ I've got lots of [hopes](https://github.com/ibiwan/drects-node/issues) for where
 - the ability to use data from external sources
 - user management capabilities
 - full document change histories
-- a TOC for this file.  Anyone know how to do that?
+=====
+
+Table of Contents generated with [DocToc](http://doctoc.herokuapp.com/)
 
