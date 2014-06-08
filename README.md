@@ -37,13 +37,22 @@ The user can then log into the system with their web browser:
 
     `http://localhost:1338`
 
+![user login](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/login-form.png "user login")
+
 The user can select an existing document to open, or (soon) select an option to create a new file.  Once logged in, there are links to log out or select a different file.
+
+![document selection](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/document-selection.png "document selection")
 
 ASSUMING the user has the file they want open, they will see the file's contents displayed in a nice, intelligently-rendered heirarchy.  Any level of the heirarchy can be collapsed individually with the chevron icon by that subtree's title.  Arrays' elements are titled by integer indices, and Objects' by string keys.
 
-![sample viewer](https://github.com/ibiwan/drects-node/blob/master/screenshots/main-viewer.png)
+![sample viewer](http://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/main-viewer.png "sample viewer")
+
+![collapsed array elements](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/collapsed-levels.png "collapsed array elements")
 
 Any field can be edited by double-clicking the displayed value, which displays up a drop-down menu of available variable types, and an editing field for the value.  After hitting enter, the field is validated, and if valid, the file is saved to the server.  For now, the file is saved to "saved.json" instead of overwriting the original.
+
+[field editing](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/field-editing.png "field editing")
+[type selection](https://raw.githubusercontent.com/ibiwan/drects-node/master/screenshots/type selection.png "type selection")
 
 #### Formulas
 
