@@ -1,5 +1,10 @@
 #!/usr/local/bin/node
 
+/*
+ *  The server, the host, the brains behind the operation.
+ *  Implemented as an express() server, backed by a sqlite db generated on the fly if not present.
+ */
+
 var fs         = require('fs');
 
 // npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt csurf handlebars

@@ -1,5 +1,9 @@
 #!/usr/local/bin/node
 
+/*
+ *  Script to create/modify users, their passwords, and their full names.  Other things too, I guess, if there's reason to.
+ */
+
 var sqlite3  = require('sqlite3').verbose();
 var password = require('password-hash-and-salt');
 

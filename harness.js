@@ -1,5 +1,10 @@
 #!/usr/local/bin/node
 
+/*
+ *  Testing harness, for use from command line, which goes through a list of nodes and formulas and lexes/parses/calculates each.
+ */
+
+
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
         // node
