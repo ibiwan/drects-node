@@ -1,0 +1,105 @@
+Help me decide on the best syntax for formulas in my Excel replacement thingie!  
+They need to be as expressive as Excel's but the data won't be in giant rectangles.
+
+Below: First, how Excel does it; Then, some ideas for how I think I might do it.
+
+
+
+------- EXCEL cell references: -------
+
+sheetname ! colrow
+sheetname ! colrow : colrow
+sheetname ! named
+
+col and row can be:
+• $absolute
+• relative
+
+A1
+A1:A7
+A1:N1
+A1:N7
+Sheet1!A1
+Sheet1!A1:N7
+SomeOtherSheet!A1:N7
+$A$1
+$A1:B$7
+$A$1:$N$7
+ThirdSheet!$A$1:$N$7
+FourthSheet!NamedArea
+
+use in a formula:
+=SUM(SomeOtherSheet!A1:N7)
+=SUM(SomeOtherSheet!HandyTable)
+
+
+
+
+------- ARBITRARY cell references: -------
+
+Given: a tree data structure, with exactly one root and three types of nodes:
+
+* leaf (primitive scalar value: string, integer, float, boolean, null, formula)
+* array (ordered set of zero or more child nodes)
+* object (labeled set of zero or more child nodes)
+
+(this structure has a one-to-one mapping with the set of json objects, plus "formula" primitives)
+(every node except the root has exactly one parent node)
+
+Needed:
+    From within a "formula" cell (string cell beginning with '='):
+    A way to reference any other cell or set of cells, as elegantly as possible.
+
+Available cells at the beginning of the process are "this" (cell containing formula) and "root" (root.)
+
+Some options:
+    • stars (*) in all examples correspond to "aggregate over all children at this level"
+    • spaces added between parse elements for clarity
+    
+    • dots and brackets and this/root/parent keywords
+
+        = this .parent .someArrayName [12] .someField
+        = root .someObjectName .someOtherObject .someField
+        
+        =SUM( this .parent .someArrayName [*] .someField )
+        =SUM( root .someObjectName .* .someField )
+
+        • can't have object members named same as keywords
+        • use some json-forbidden character like $ to define $parent keywords
+        
+    • filesystem style
+
+        = someArrayName /12 /someField                    
+            (implied dot)
+        = . /someArrayName /12 /someField                 
+            (explicit dot)
+        = .. /someArrayName /12 /someField
+        = /someObjectName /someOtherObject /someField
+        = /someObjectName \someOtherObject /someField \37 
+            (allow for DOSians)
+        = http://someexternal.com/someObjectName/someOtherObject/someField 
+            (use json to get data from an external source; returns scalar or array)
+ 
+        =SUM( .. /someArrayName /* /someField )
+        =SUM( /someObjectName /* /someField )
+
+        • can't distinguish, when parsing, between arrays and objects
+            assume array for integers, fall back on object if array not found?
+            merge parsing logic for both, and determine at run-time by inspecting data?
+        • could allow backslash interchangeable with forward
+        • everyone's familiar with paths and urls and etc
+        • could use http://blah for external data in the future
+        
+    • angles and squares, slash for root, dot for current
+
+        = . parent <someArrayName> [12] <someField>
+        = / <someObjectName> <someOtherObject> <someField>
+        
+        =SUM( . parent <someArrayName> [*] <someField> )
+        =SUM( / <someObjectName> <*> <someField> )
+
+        • fabulously easy to parse unambiguously
+        • "parent" keyword not wrapped so won't conflict
+        • difficult to interpret visually
+        
+    • ???

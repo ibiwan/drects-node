@@ -1,0 +1,17 @@
+formula ::= EQUALS scalar
+
+scalar  ::= NEG? DIGITS ( DOT DIGITS )?
+          | STRING
+          | BOOL
+          | NULL
+          | path
+          | fn_call
+
+fn_call ::= UNARY     LPAREN scalar RPAREN
+          | BINARY    LPAREN scalar COMMA  scalar RPAREN
+          | MIXED     LPAREN scalar COMMA  tensor RPAREN
+          | AGGREGATE LPAREN tensor RPAREN
+
+tensor  ::= path
+
+path    ::= ( DOT? DOT )? ( ( SLASH | BSLASH ) ( DIGITS | LABEL | STAR | DOT DOT ) )+
