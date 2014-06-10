@@ -1,7 +1,7 @@
 #!/usr/local/bin/node
 
 var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('blah.db');
+var db = new sqlite3.Database('rects.db');
 
 db.serialize(function() {
   db.run("CREATE TABLE IF NOT EXISTS lorem (info TEXT)");

@@ -6,43 +6,24 @@
 
 var sqlite3  = require('sqlite3').verbose();
 var password = require('password-hash-and-salt');
+var argv = require('minimist')(process.argv.slice(2));
 
-var user = null;
-var pass = null;
-var name = null;
+var user = argv.u;
+var pass = argv.p;
+var name = argv._.join(" ");
 
-process.argv.forEach(function (val, index, array) {
-    var eq = val.indexOf('=');
-    if(eq)
-    {
-        parts = val.split('=');
-        key = parts[0];
-        val = parts[1];
-        if( key === '--user' )
-        {
-            user = val;
-        }
-        if( key === '--pass' )
-        {
-            pass = val;
-        }
-        if( key === '--name' )
-        {
-            name = val; // fixme: handle spaces in name
-        }
-    }
-});
+console.log(user, pass, name);
 
 if( user === null || pass === null )
 {
-    console.log("use with --user=username --pass=password");
+    console.log("use with -u username -p password Full Name Here Optionally");
     exit();
 }
 
 console.log("creating/updating user: " + user + " with password: " + pass);
 
-var db = new sqlite3.Database('blah.db');
-db.run("CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username TEXT, passhash TEXT, full_name TEXT)");
+var db = new sqlite3.Database('rects.db');
+db.run("CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username TEXT, passhash TEXT, full_name TEXT, archived BOOL DEFAULT false)");
 
 password(pass).hash(function(error, hash) {
     if(error)

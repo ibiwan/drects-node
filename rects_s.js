@@ -43,7 +43,7 @@ function init()
 
 function setupDB()
 {
-    var db = new sqlite3.Database('blah.db');
+    var db = new sqlite3.Database('rects.db');
     db.run("CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username TEXT, passhash TEXT, full_name TEXT)");
     return db;
 }
