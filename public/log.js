@@ -35,12 +35,18 @@
             {
                 values.unshift(type.toUpperCase() + ':');
             }
-            for( var i = 0; i < values.length; i++ )
-            {
-                // console.log(values[i]);
+            // for( var i = 0; i < values.length; i++ )
+            // {
+            //     console.log(i, values[i]);
+            // }
+            try{
+                console.log(values);
+                // console.log((new Error).stack);
+                // console.log.apply(this, values); // why did this stop working?
+            } catch (e) {
+                console.log("error in logging, so I record it by... logging!?");
+                console.log(e);
             }
-            // console.log(values);
-            console.log.apply(this, values); // why did this stop working?
         }
     }
 

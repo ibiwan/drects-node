@@ -4,27 +4,33 @@
       "abilities": [
         {
           "ability": "Str",
-          "total": 20
+          "total": 20,
+          "mod": "=/plus_field"
         },
         {
           "ability": "Dex",
-          "total": 18
+          "total": 18,
+          "mod": "=floor(div(add(../total, -10), 2))"
         },
         {
           "ability": "Con",
-          "total": 16
+          "total": 16,
+          "mod": "=floor(div(add(../total, -10), 2))"
         },
         {
           "ability": "Int",
-          "total": 14
+          "total": 14,
+          "mod": "=floor(div(add(../total, -10), 2))"
         },
         {
           "ability": "Wis",
-          "total": 15
+          "total": 15,
+          "mod": "=floor(div(add(../total, -10), 2))"
         },
         {
           "ability": "Cha",
-          "total": 10
+          "total": 10,
+          "mod": "=floor(div(add(../total, -10), 2))"
         }
       ],
       "levels": [
@@ -89,7 +95,9 @@
         "age": "22 years",
         "height": "5 ' 7\"",
         "weight": "170 lb."
-      }
+      },
+      "somecat": "=cat(../sources/0, ../sources/1)",
+      "sources": ["a", "b"]
     }
   ],
   "rex-ordering": [
@@ -108,5 +116,6 @@
     "abilities"  : "ability",
     "characters" : "name",
     "levels"     : "class"
-  }
+  },
+  "plus_field": "123"
 }

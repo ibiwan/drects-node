@@ -302,7 +302,7 @@
                 switch( v[1].token )
                 {
                     case lex.punct.DOT:
-                        asserttoken(v, 2, lex.punct.DOT, "single dot in subpath doesn't make sense...")
+                        asserttoken(v, 2, lex.punct.DOT, "single dot in subpath doesn't make sense...");
                         path.push({'type':'PARENT', 'selector':null});
                         remainder = v.slice(3);
                         break;

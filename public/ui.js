@@ -9,7 +9,7 @@
             require('./log').log
         );
     } else if ( typeof define === 'function' && define.amd ) {
-        // amd (require.js)
+        // "amd" (require.js)
         define(
             ['jquery', 'jquery-ui', './parser', './lexer', './log'],
             function ($, jqueryui, parser, lexer, log) {
@@ -326,7 +326,7 @@
 
     function save()
     {
-        var savedata = extractdata($('#root'))[0];
+        var savedata = extractdata($('#root'));
         config.save(savedata);
         var savejson = JSON.stringify(savedata);
         console.log(savejson);
@@ -490,12 +490,20 @@
             var node = formula_nodes[i];
 
             var formula = node.data('formula');
-            var io = {'context':{'root':$('#root'), 'curr':node.data('$valuehtml')}};
+            var io = {'context':{
+                'root':$('#root'),
+                'curr':node.data('$valuehtml')
+            }};
 
-            var success = parse_formula(formula, io);
-            if( success )
-            {
-                node.data('$valuehtml').text(io.value);
+            try {
+                var success = parse_formula(formula, io);
+                if( success )
+                {
+                    node.data('$valuehtml').text(io.value);
+                }
+            }catch(e){
+                node.data('$valuehtml').text('incalculable!');
+                console.log(e);
             }
         }
     }
@@ -512,7 +520,8 @@
                 var $htmlroot = $('#root')
                     .attr('class',    'array')
                     .data('$parent',   null)
-                    .data('$$children', [sub.$stack]);
+                    .data('$$children', sub.$stack.data('$$children'));
+
                 $htmlroot.append(sub.$stack);
                 sub.$stack.data('$parent', $htmlroot);
 

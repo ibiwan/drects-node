@@ -58,7 +58,7 @@
     }
     function value(node)
     {
-        return parseFloat(node.text());
+        return node.text();
     }
 
     return {
