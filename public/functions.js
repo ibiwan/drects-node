@@ -11,8 +11,8 @@
         'unary' : {
             'abs'   : function u_abs(p)   { return abs(parseFloat(p)); },
             'neg'   : function u_neg(p)   { return -parseFloat(p); },
-            'not'   : function u_not(p)   { return !parseFloat(p); },
-            'floor' : function u_floor(p) { return parseInt(parseFloat(p)); },
+            'not'   : function u_not(p)   { return !p; },
+            'floor' : function u_floor(p) { return parseInt(p); },
         },
         'binary' : {
             'add' : function b_add(p1, p2) { return parseFloat(p1) + parseFloat(p2); },

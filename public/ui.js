@@ -132,6 +132,8 @@
                 .addClass("horizontal")
                 .data('$valuehtml', $valuenode);
 
+            $valuenode.data('stack', $primstack);
+
             if( type === 'formula' )
             {
                 $primstack.data('formula', data);
@@ -312,15 +314,23 @@
             htmlnode.hasClass('boolean') ||
             htmlnode.hasClass('null')    )
         {
-            return htmlnode.text();
+            var t = htmlnode.text();
+            return t;
+        }
+        if( htmlnode.hasClass('formula') )
+        {
+            var f = htmlnode.data('stack').data('formula');
+            return f;
         }
         if( htmlnode.hasClass('array') )
         {
-            return extractarray(htmlnode);
+            var a = extractarray(htmlnode);
+            return a;
         }
         if( htmlnode.hasClass('object') )
         {
-            return extractobject(htmlnode);
+            var o = extractobject(htmlnode);
+            return o;
         }
     }
 
@@ -386,6 +396,8 @@
             var validators = {
                 'string'  : { 'func' : function(v){ return true; },
                               'err'  : 'all strings are strings, right?  right?!?' },
+                'formula' : { 'func' : function(v){ return value.indexOf('=') === 0; },
+                              'err'  : 'functions must start with "="' },
                 'number'  : { 'func' : function(v){ return !isNaN(parseFloat(v)) && isFinite(v); },
                               'err'  : 'number fields must take numeric values' },
                 'null'    : { 'func' : function(v){ return [null, '', 'null'].indexOf(v) > -1; },
@@ -414,7 +426,7 @@
         var parent = $displayfield.parent();
 
         var $typefield = $('<select></select');
-        var types = ['null','boolean','number','string'];
+        var types = ['null','boolean','number','string', 'formula'];
         for(var i = 0; i < types.length; i++)
         {
             var cur = types[i];
@@ -422,7 +434,16 @@
             var $option = $('<option value="' + cur + '" ' + sel + '>' + cur + '</option>');
             $typefield.append($option);
         }
-        var $editfield = $('<input type="text" value="' + $displayfield.text() + '"></input>');
+
+        var field_contents;
+        if( type === 'formula' )
+        {
+            field_contents = parent.data('formula');
+        } else {
+            field_contents = $displayfield.text();
+        }
+
+        var $editfield = $('<input type="text" value="' + field_contents + '"></input>');
         parent.append($typefield);
         parent.append($editfield);
 
@@ -443,7 +464,14 @@
 
                     if( changed )
                     {
-                        $displayfield.text(value);
+                        if( selectedtype === 'formula' )
+                        {
+                            parent.data('formula', value);
+                            $displayfield.text('ERR');
+                        } else {
+                            $displayfield.text(value);
+                            console.log("setting value:", value);
+                        }
                         $displayfield.attr('class', selectedtype + ' primitive');
                         $displayfield.data('type', selectedtype);
 
@@ -511,14 +539,14 @@
     $(function initialize(){
         $("body").disableSelection();
         $.ajax("getdoc")
-            .done(function gotjson(returned_data, stringStatus, jqXHR){
-                config.load(returned_data);
+            .done(function gotjson(file_data, stringStatus, jqXHR){
+                config.load(file_data);
 
                 var summaryholder = {};
-                sub = gentree(returned_data, "root", '', summaryholder);
+                sub = gentree(file_data, "root", summaryholder);
 
                 var $htmlroot = $('#root')
-                    .attr('class',    'array')
+                    .attr('class',    'object')
                     .data('$parent',   null)
                     .data('$$children', sub.$stack.data('$$children'));
 
