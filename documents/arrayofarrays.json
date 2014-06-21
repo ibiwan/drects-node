@@ -1,21 +1,17 @@
-{
-  "array-of-arrays": [
+[
     [
       "1",
       "2",
       "3"
     ],
     [
-      "a",
-      "b",
-      "c"
+      "won't currently",
+      "load / save",
+      "correctly"
     ],
     [
       "true",
       "false",
       "true"
     ]
-  ],
-  "rex-ordering": [],
-  "rex-primaries": []
-}
+]

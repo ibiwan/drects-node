@@ -82,22 +82,24 @@
         };
     })();
 
-    function gentree(data, primaryvalue, summaryholder)
+    function gentree(data, primaryvalue, summary_holder)
     {
         function $newdiv(type, value)
         {
             return $('<div>' + value + '</div>').addClass(type);
         }
-        function $makecontainerstack(type, index, $valwrapper, $valuenode, summarystr)
+        function $makecontainerstack(type, index, $stack, $valuehtml, summarystr)
         {
             var $label = $newdiv('label', index);
 
             var $collapsebutton = $newdiv('controller', '<i class="' + collapsers[type + '-open'] + '"></i>')
                 .data('type',       type)
-                .data('$valuehtml', $valuenode)
-                .data('content',    $valwrapper)
+                .data('$valuehtml', $valuehtml)
+                .data('$content',   $stack)
             ;
-            $valwrapper.data('state', 'shown');
+            console.log("valuehtml:", $valuehtml);
+            console.log("$contant:", $stack);
+            $stack.data('state', 'shown');
 
             var $labelstack = $newdiv('labelstack', '')
                 .addClass((type === 'element') ? 'vertical' : 'horizontal')
@@ -106,7 +108,7 @@
 
             var $wrapper = $newdiv(type, '')
                 .append($labelstack)
-                .append($valwrapper);
+                .append($stack);
 
             if( summarystr )
             {
@@ -116,52 +118,69 @@
             }
             return $wrapper;
         }
-        function makeprimitivestack(type, data)
-        {
-            if( data[0] === '=' )
+        function $make_type_selector(type) {
+            var $type_selector = $('<select></select');
+            var types = ['null','boolean','number','string', 'formula'];
+            for(var i = 0; i < types.length; i++)
             {
-                type = 'formula';
+                var cur = types[i];
+                var sel = ((cur == type) ? 'selected' : '');
+                var $option = $('<option value="' + cur + '" ' + sel + '>' + cur + '</option>');
+                $type_selector.append($option);
             }
+            return $type_selector
+        }
 
-            var $valuenode = $newdiv(type, data)
-                .addClass('primitive')
-                .data('type', type);
+        function $make_scalar(type, data)
+        {
+            var $value_display = $newdiv('value_display', data)
+                .addClass(type);
+            var $type_selector = $make_type_selector(type);
+            var $edit_field = $('<input type="text" value=""></input>');
 
-            var $primstack = $newdiv('primstack',  '')
-                .append($valuenode)
-                .addClass("horizontal")
-                .data('$valuehtml', $valuenode);
+            var $scalar = $newdiv('scalar', '')
+                .append($value_display)
+                .append($type_selector)
+                .append($edit_field)
+                .addClass('horizontal')
+                .data('type', type)
+                .data('raw_value', data)
+                .data('display_value', data);
 
-            $valuenode.data('stack', $primstack);
+            $value_display.data('$scalar', $scalar);
+            $type_selector.data('$scalar', $scalar);
+            $edit_field.data('$scalar', $scalar);
 
             if( type === 'formula' )
             {
-                $primstack.data('formula', data);
-                formula_nodes.push($primstack);
+                formula_nodes.push($scalar);
             }
 
-            return {'$stack': $primstack, '$valuehtml':$valuenode};
+            return $scalar;
         }
-        function makearray(data, primaryvalue)
+        function $make_array(data, primaryvalue)
         {
-            var $htmlnode = $newdiv('array', '');
+            var $array = $newdiv('array', '')
+                .data('type', 'array');
 
-            var $$children = [];
+            var $$fields = [];
             for( var i = 0; i < data.length; i++ )
             {
-                var holder = {};
-                var ret  = gentree(data[i], primaryvalue, holder);
-                $$children.push(ret.$valuehtml);
-                ret.$valuehtml.data('$parent', $htmlnode);
+                var summary_holder = {};
+                var ret  = gentree(data[i], primaryvalue, summary_holder);
+                var summarystr = (summary_holder.val === undefined)  ? '' : summary_holder.val;
 
-                var summarystr = (holder.val === undefined)  ? '' : holder.val;
-                var $stack = $makecontainerstack('element', i, ret.$stack, ret.$valuehtml, summarystr);
-                $htmlnode.append($stack);
+                var $element = ret.$valuehtml;
+                $$children.push($element);
+                $element.data('$parent', $arraynode);
+
+                var $stack = $makecontainerstack('element', i, ret.$stack, $element, summarystr);
+                $arraynode.append($stack);
             }
-            $htmlnode.data('$$children', $$children);
-            return {'$stack':$htmlnode, '$valuehtml':$htmlnode};
+            $arraynode.data('$$children', $$children);
+            return {'$stack':$arraynode, '$valuehtml':$arraynode};
         }
-        function makeobject(data, primaryvalue, summaryholder)
+        function makeobject(data, primaryvalue, summary_holder)
         {
             function sortkeys(keys)
             {
@@ -199,7 +218,7 @@
                 }
                 return keys;
             }
-            var $htmlnode = $newdiv('object', '');
+            var $objnode = $newdiv('object', '');
 
             var $$children = {};
             var keys     = sortkeys(getkeys(data));
@@ -214,33 +233,38 @@
                 }
 
                 var ret = gentree(data[key], usepv, summaryholder);
-                $$children[key] = ret.$valuehtml;
-                ret.$valuehtml.data('$parent', $htmlnode);
+                var $member = ret.$valuehtml;
+                $$children[key] = $member;
+                $member.data('$parent', $objnode);
 
-                var $stack = $makecontainerstack('member', key, ret.$stack, ret.$valuehtml, '');
-                $htmlnode.append($stack);
+                var $stack = $makecontainerstack('member', key, ret.$stack, $member, '');
+                $objnode.append($stack);
             }
-            $htmlnode.data('$$children', $$children);
-            return {'$stack':$htmlnode, '$valuehtml':$htmlnode};
+            $objnode.data('$$children', $$children);
+            return {'$stack':$objnode, '$valuehtml':$objnode};
         }
 
         if( data === null )
         {
-            data = "null";
+            data = "null"; // what's this fix?
         }
 
         var t = typeof(data);
         if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
         {
-            return makeprimitivestack(t, data);
+            if( data[0] === '=' )
+            {
+                t = "formula";
+            }
+            return $make_scalar(t, data);
         }
         if( data instanceof Array )
         {
-            return makearray(data, primaryvalue);
+            return $make_array(data, primaryvalue);
         }
         if( data instanceof Object )
         {
-            return makeobject(data, primaryvalue, summaryholder);
+            return makeobject(data, primaryvalue, summary_holder);
         }
         console.trace();
         console.log(data);
@@ -319,7 +343,7 @@
         }
         if( htmlnode.hasClass('formula') )
         {
-            var f = htmlnode.data('stack').data('formula');
+            var f = htmlnode.data('$primstack').data('formula');
             return f;
         }
         if( htmlnode.hasClass('array') )
@@ -360,7 +384,7 @@
 
     function handleToggle(eventObject)
     {
-        var $sub       = $(this).data('content');
+        var $sub       = $(this).data('$content');
         var $summary   = $(this).data('$summaryhtml');
 
         // update collapser icon
@@ -425,15 +449,6 @@
         var type   = $displayfield.data('type');
         var parent = $displayfield.parent();
 
-        var $typefield = $('<select></select');
-        var types = ['null','boolean','number','string', 'formula'];
-        for(var i = 0; i < types.length; i++)
-        {
-            var cur = types[i];
-            var sel = ((cur == type) ? 'selected' : '');
-            var $option = $('<option value="' + cur + '" ' + sel + '>' + cur + '</option>');
-            $typefield.append($option);
-        }
 
         var field_contents;
         if( type === 'formula' )
@@ -443,7 +458,6 @@
             field_contents = $displayfield.text();
         }
 
-        var $editfield = $('<input type="text" value="' + field_contents + '"></input>');
         parent.append($typefield);
         parent.append($editfield);
 
@@ -543,7 +557,7 @@
                 config.load(file_data);
 
                 var summaryholder = {};
-                sub = gentree(file_data, "root", summaryholder);
+                sub = gentree(file_data, "doc_root", summaryholder);
 
                 var $htmlroot = $('#root')
                     .attr('class',    'object')

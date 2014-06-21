@@ -27,7 +27,7 @@
     font-weight : bold;
 }
 * {
-    /*outline : 1px solid #DDD;*/
+    outline : 1px solid #DDD;
     padding : 2px;
     opacity : 1.0;
     -webkit-transition : opacity 1s;
