@@ -110,7 +110,8 @@
             var $field = $newdiv(type, '')
                 .append($labelstack).data('$labelstack', $labelstack)
                 .append ($data_node).data( '$data_node',  $data_node)
-                .data('selector', selector.toString());
+                .data('selector', selector.toString())
+                .data('type', type);
 
             addbackrefs([$labelstack, $controller, $label, $label_edit, $data_node], $field, '$field');
 
@@ -286,12 +287,14 @@
         switch(type)
         {
             case 'formula':
-                console.log(tab + '"' + htmlnode.data('raw_value') + '"');
-                // intentional fallthrough
             case 'string':
             case 'number':
             case 'boolean':
             case 'null':
+                if( type === 'formula')
+                {
+                    console.log(tab + '"' + htmlnode.data('raw_value') + '"');
+                }
                 console.log(tab + '"' + htmlnode.data('display_value') + '"');
                 break;
             case 'array':
@@ -312,52 +315,29 @@
 
     function extractdata(htmlnode)
     {
-        function extractarray(htmlnode)
+        var type = htmlnode.data('type');
+        if( ['string', 'number', 'boolean', 'null', 'formula'].indexOf(type) > -1 )
         {
-            var ret = [];
-            var kids = htmlnode.data('$$children');
-            for( var i = 0; i < kids.length; i++ )
-            {
-                var kid = kids[i];
-                var element = extractdata(kid);
-                ret.push(element);
-            }
-            return ret;
-        }
-        function extractobject(htmlnode)
-        {
-            var ret = {};
-            var kids = htmlnode.data('$$children');
-            for( var key in kids )
-            {
-                var kid = kids[key];
-                var member = extractdata(kid);
-                ret[key] = member;
-            }
-            return ret;
-        }
-        if( htmlnode.hasClass('string')  ||
-            htmlnode.hasClass('number')  ||
-            htmlnode.hasClass('boolean') ||
-            htmlnode.hasClass('null')    )
-        {
-            var t = htmlnode.text();
+            var t = htmlnode.data('raw_value');
             return t;
         }
-        if( htmlnode.hasClass('formula') )
+        if(['array', 'object'].indexOf(type) > -1 )
         {
-            var f = htmlnode.data('$primstack').data('formula');
-            return f;
-        }
-        if( htmlnode.hasClass('array') )
-        {
-            var a = extractarray(htmlnode);
-            return a;
-        }
-        if( htmlnode.hasClass('object') )
-        {
-            var o = extractobject(htmlnode);
-            return o;
+            var a = []; var o = {};
+            var $$fields = htmlnode.data('$$fields');
+            for( var i in $$fields )
+            {
+                var $field = $$fields[i];
+                var field = extractdata($field.data('$data_node'));
+                if( type === 'array' )
+                {
+                    a.push(field);
+                } else {
+                    var key = $field.data('selector');
+                    o[key] = field;
+                }
+            }
+            return type === 'array' ? a : o;
         }
     }
 
@@ -387,31 +367,31 @@
 
     function handleToggle(eventObject)
     {
-        var $sub       = $(this).data('$content');
-        var $summary   = $(this).data('$summaryhtml');
+        var $field      = $(this).data('$field');
+        var $data_node  = $field.data('$data_node');
+        var $summary    = $field.data('$summary');
 
         // update collapser icon
-        var direction  = ($sub.data('state') == 'shown') ? 'close' : 'open';
-        var $collapser = $(this.firstChild)
-            .attr('class', collapsers[$(this).data('type') + '-' + direction]);
+        var direction  = ($data_node.data('state') == 'shown') ? 'close' : 'open';
+        var type = $field.data('type');
+
+        // arrow is first child of controller ("this")
+        $($(this).children(':first')).attr('class', collapsers[type + '-' + direction]);
 
         if( direction === 'open' )
         {
             if( $summary ) $summary.hide();
-            $sub.show().data('state','shown');
+            $data_node.show().data('state','shown');
 
             setTimeout(function(){
-                $sub.removeClass('hidden');
+                $data_node.removeClass('hidden');
             }, 10);
        } else {
-            var $inner = $(this).data('$valuehtml');
-            var $parent = $inner.data('$parent').data('$parent');
-
-            $sub.addClass('hidden');
+            $data_node.addClass('hidden');
             setTimeout(function(){
-                $sub.hide().data('state','hidden');
+                $data_node.hide().data('state','hidden');
                 if( $summary ) $summary.show();
-                $parent.hide().show();
+                $field.hide().show();
             }, 500);
         }
     }
@@ -444,53 +424,41 @@
             alert(validator.err); return false;
         }
 
-        var $displayfield;
-        if( $(this).hasClass('primitive') ) {
-            $displayfield = $(this);
-        }
+        // "this" is $scalar
+        var $scalar = $(this);
 
-        var type   = $displayfield.data('type');
-        var parent = $displayfield.parent();
+        var old_type       = $scalar.data('type');
+        var $field         = $scalar.data('$field');
+        var $composition   = $field.data('$composition');
 
+        var $value_display = $scalar.data('$value_display');
+        var $type_selector = $scalar.data('$type_selector');
+        var $value_edit    = $scalar.data('$value_edit');
 
-        var field_contents;
-        if( type === 'formula' )
-        {
-            field_contents = parent.data('formula');
-        } else {
-            field_contents = $displayfield.text();
-        }
+        var old_value = $scalar.data('raw_value').toString();
+        $value_edit.val(old_value);
 
-        parent.append($typefield);
-        parent.append($editfield);
+        $value_display.hide();
+        $type_selector.show();
+        $value_edit.show();
 
-        $displayfield.hide();
+        $value_edit.keypress(function editkeypress(event) {
+            if( event.which == 13 ) { // return key
+                var new_value = $value_edit.val();
+                var new_type  = $type_selector.val();
+                var changed   = (new_value != old_value || old_type != new_type);
+                if( !changed || validate(new_type, new_value) ) {
+                    $value_edit.hide();
+                    $type_selector.hide();
+                    $value_display.show();
 
-        $editfield.keypress(function editkeypress(event){
-            if( event.which == 13 ) // return
-            {
-                var value = $editfield.val();
-                var selectedtype = $typefield.val();
-                var changed = (value != $displayfield.text() || type != selectedtype);
-                if( !changed || validate(selectedtype, value) )
-                {
-                    $editfield.hide();
-                    $typefield.hide();
-
-                    $displayfield.show();
-
-                    if( changed )
-                    {
-                        if( selectedtype === 'formula' )
-                        {
-                            parent.data('formula', value);
-                            $displayfield.text('ERR');
-                        } else {
-                            $displayfield.text(value);
-                            // console.log("setting value:", value);
-                        }
-                        $displayfield.attr('class', selectedtype + ' primitive');
-                        $displayfield.data('type', selectedtype);
+                    if( changed ) {
+                        $scalar.data('raw_value', new_value);
+                        $value_display.data('type', new_type);
+                        var display_value = (new_type === 'formula') ? 'ERR' : new_value;
+                        $scalar.data('display_value', display_value);
+                        $value_display.html(display_value);
+                        $scalar.attr('class', new_type + ' scalar');
 
                         calculateFormulas();
                         save();
@@ -498,10 +466,10 @@
                 }
             }
         });
-        $typefield.change(function changetype(){
-            var newtype = $(this).val();
-            var defaults = {'null':'null', 'boolean':'false', 'number':'0', 'string':'text'};
-            $editfield.val( (newtype !== type) ? defaults[newtype] : $displayfield.text() );
+        $type_selector.change( function changetype() {
+            var new_type = $(this).val(); // "this" here is the drop-down
+            var defaults = {'null':'null', 'boolean':'false', 'number':'0', 'string':'text', 'formula':'='};
+            $value_edit.val( (new_type !== old_type) ? defaults[new_type] : old_value );
         });
     }
 
@@ -536,8 +504,6 @@
 
             var formula = node.data('raw_value');
 
-            // console.log("FORMULA:", formula);
-
             var io = {'context':{
                 'root':$('#document').data('document'),
                 'curr':node
@@ -545,11 +511,8 @@
 
             try {
                 var success = parse_formula(formula, io);
-                // console.log("calculation output:", io);
                 if( success )
                 {
-                    // console.log("old display value:" ,node.data('display_value'));
-                    // console.log("display field", node.data('$value_display'));
                     node.data('display_value', io.value);
                     node.data('$value_display').text(io.value);
                 }
@@ -574,11 +537,12 @@
                     .data('document', doc);
 
                 $('.controller').click(handleToggle);
-                $('.primitive').dblclick(handleEdit);
+                $('.scalar').dblclick(handleEdit);
 
                 calculateFormulas();
 
-                printdom(doc);
+                // printdom(doc);
+                // save();
             });
     });
 });

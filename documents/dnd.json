@@ -117,6 +117,6 @@
     "characters" : "name",
     "levels"     : "class"
   },
-  "plus_field": "123",
+  "plus_field": "+",
   "array_of_prims":[1,2, 3]
 }
