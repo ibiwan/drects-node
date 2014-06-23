@@ -38,7 +38,8 @@
             case 'ROOT':
                 return valuegetter(root_node, root_node, subpath);
             case 'PARENT':
-                return valuegetter(root_node, o.parent(root_node, curr_node), subpath);
+                var parent = o.parent(root_node, curr_node);
+                return valuegetter(root_node, parent, subpath);
             case 'CHILD':
                 var sel = path_elements[0].selector;
                 if( sel === '(STAR)' ) // (star)
@@ -47,18 +48,18 @@
                     for( var s in o.selectors(curr_node) )
                     {
                         var e = o.child(curr_node, s);
-                        var elements = valuegetter(root_node, e.child, subpath);
+                        var elements = valuegetter(root_node, e, subpath);
                         log('debug', "got elements:", elements);
                         ret = ret.concat(elements);
                     }
                     log('debug', "returning ret:", ret);
                     return ret;
                 } else {
-                    var mel = o.child(curr_node,sel);
-                    return valuegetter(root_node, mel.child, subpath);
+                    var field = o.child(curr_node,sel);
+                    return valuegetter(root_node, field, subpath);
                 }
-                break; // should have already hit a "return" in all cases
-            default:
+                break;
+            default: // should have already hit a "return" in all cases
                 throw "path error: unknown path element type:" + t;
         }
     }

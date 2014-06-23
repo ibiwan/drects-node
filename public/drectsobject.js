@@ -22,43 +22,34 @@
     }
     function selectors(node)
     {
-        var kids = node.data('$$children');
-        if(isArray(node))
+        var kids = node.data('$$fields');
+        var sels = [];
+        for( var i in kids )
         {
-            var indices = [];
-            for(var i = 0; i < kids.length; i++)
-            {
-                indices.push(i);
-            }
-            return indices;
+            sels.push(kids[i].data('selector'));
         }
-        if(isObject(node))
-        {
-            var keys = [];
-            for(var k in kids)
-            {
-                keys.push(k);
-            }
-            return keys;
-        }
+        return sels;
     }
     function parent(tree, node)
     {
-        return node.data('$parent');
+        return node.data('$field').data('$composition');
     }
     function child(node, selector)
     {
-        var kids = node.data('$$children');
-        var c = kids[selector]; // member or element
-        if( c === undefined )
-        {
-            throw "could not find element: " + c + " in structure: " + node;
+        var $$fields = node.data('$$fields');
+        for( var i in $$fields ) {
+            var $field = $$fields[i];
+            var s = $field.data('selector');
+            if( s === selector ) {
+                return $field.data('$data_node');
+            }
         }
-        return {'success':true, 'child':c};
+        console.log("could not find element: ", selector, " in structure: ", node);
+        throw "could not find element: " + selector + " in structure: " + node;
     }
     function value(node)
     {
-        return node.text();
+        return node.data('display_value');
     }
 
     return {
