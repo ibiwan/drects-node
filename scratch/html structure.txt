@@ -1,0 +1,53 @@
+"document" is a static object and contains a "root" object containing everything else
+
+data_node:   composition or primstack
+field:       member or element
+composition: object or array
+selector:    index (number) or key (identifier)
+controller   <i> icon
+edit_field   for editing member key
+summary      for displaying element summary field
+
+data_type: // not an html node, just a definition
+    object, array, string, formula, number, boolean, null
+hidden, vertical, horizontal: display logic only
+
+
+data_node:
+    1 composition
+    OR
+    1 scalar
+composition:
+    0+ field
+        1 labelstack
+            1 controller
+            1 selector
+            0 or 1 edit_field
+        1 data_node
+        0 or 1 summary
+scalar:
+    1 display_field
+    1 type_selector
+    1 edit_field
+    
+data references: ($: reference to html entity; $$: array of html entity references; other: raw data)
+composition:
+    type           (array or object)
+    $$fields       (simple array)
+    $field_of      ("parent")
+field:
+    selector_value (index or key)
+    $composition
+    $controller    (2-way)
+    $selector      (2-way)
+    $label_edit    (2-way)
+    $child_node    ("child")
+    $summary
+scalar:
+    type
+    raw_value
+    display_value
+    $field_of      ("parent")
+    $value_display (2-way)
+    $type_select   (2-way)
+    $value_edit    (2-way)
