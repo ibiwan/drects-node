@@ -108,7 +108,7 @@
                 .addClass((type === 'element') ? 'vertical' : 'horizontal');
 
             var $field = $newdiv(type, '')
-                .append($labelstack).data('$labelstack', $labelstack)
+                .append($labelstack) // .data('$labelstack', $labelstack) // nobody seems to care
                 .append ($data_node).data( '$data_node',  $data_node)
                 .data('selector', selector.toString())
                 .data('type', type);
@@ -252,10 +252,10 @@
             return $object;
         }
 
-        if( data === null )
-        {
-            data = "null"; // what's this fix?
-        }
+        // if( data === null )
+        // {
+        //     data = "null"; // what's this fix?
+        // }
 
         var t = typeof(data);
         if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
@@ -396,6 +396,12 @@
         }
     }
 
+    function stringToBoolean(string){
+        switch(string.toLowerCase()){
+            case "true": case "yes": case "1": return true;
+            default: return false;
+        }
+    }
     function handleEdit(eventObject)
     {
         function validate(type, value)
@@ -428,8 +434,6 @@
         var $scalar = $(this);
 
         var old_type       = $scalar.data('type');
-        var $field         = $scalar.data('$field');
-        var $composition   = $field.data('$composition');
 
         var $value_display = $scalar.data('$value_display');
         var $type_selector = $scalar.data('$type_selector');
@@ -453,9 +457,26 @@
                     $value_display.show();
 
                     if( changed ) {
+                        switch(new_type) {
+                            case 'string':
+                                break;
+                            case 'number':
+                                new_value = parseFloat(new_value);
+                                break;
+                            case 'null':
+                                new_value = null;
+                                break;
+                            case 'boolean':
+                                new_value = stringToBoolean(new_value);
+                                break;
+                        }
+
+
                         $scalar.data('raw_value', new_value);
                         $value_display.data('type', new_type);
+
                         var display_value = (new_type === 'formula') ? 'ERR' : new_value;
+
                         $scalar.data('display_value', display_value);
                         $value_display.html(display_value);
                         $scalar.attr('class', new_type + ' scalar');
@@ -473,52 +494,48 @@
         });
     }
 
-    function parse_formula(formula, io)
+    function parse_formula(formula, context)
     {
         var tokenstream;
+
         try {
             tokenstream = lex.lex(formula);
             log('lex', tokenstream);
         }catch(e){
             log('lex_error', e);
             log('lex_error', e.stack);
-            return false;
+            throw(e);
         }
+
         try {
-            var formula_io = {'context':io.context};
-            parser.parse(tokenstream, formula_io);
-            io.value = formula_io.value;
+            return parser.parse(tokenstream, context);
         }catch(e){
             log('parse_error', e);
             log('parse_error', e.stack);
-            return false;
+            throw(e);
         }
-        return true;
     }
 
     function calculateFormulas()
     {
         for( var i in formula_nodes )
         {
-            var node = formula_nodes[i];
-
-            var formula = node.data('raw_value');
-
-            var io = {'context':{
-                'root':$('#document').data('document'),
-                'curr':node
-            }};
-
             try {
-                var success = parse_formula(formula, io);
-                if( success )
-                {
-                    node.data('display_value', io.value);
-                    node.data('$value_display').text(io.value);
-                }
+                var node = formula_nodes[i];
+                var formula = node.data('raw_value');
+                var context = {
+                    'root':$('#document').data('document'),
+                    'curr':node
+                };
+
+                var value = parse_formula(formula, context);
+
+                node.data('display_value', value);
+                node.data('$value_display').text(value);
             }catch(e){
-                node.data('$displayfield').text('incalculable!');
+                node.data('$value_display').text('incalculable!');
                 console.log(e);
+                // don't re-throw; continue to next formula
             }
         }
     }

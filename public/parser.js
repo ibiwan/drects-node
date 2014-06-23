@@ -484,8 +484,14 @@
         }
     };
 
+    function parse(tokens, context) {
+        var io = {'context':context};
+        productions.p_formula.parse(tokens, io);
+        return io.value;
+    }
+
     return {
-        'parse' : productions.p_formula.parse,
+        'parse' : parse,
     };
 });
 
