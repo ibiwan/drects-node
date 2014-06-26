@@ -1,4 +1,8 @@
 {
     "A":{"a":"a","b":"b","c":"c"},
-    "B":{"i":1,"ii":2,"iii":3}
+    "B":{"i":1,"ii":2,"iii":3},
+    "somecat": "=cat(../sources/0, ../sources/1)",
+    "sources": ["a", "b"],
+    "plus_field": "+",
+    "plussy":"=/plus_field"
 }
