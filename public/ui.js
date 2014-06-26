@@ -495,26 +495,45 @@
 
     function calculateFormulas()
     {
+        var num_changes = 0;
+        var prev_num_changes;
+
         for( var i in formula_nodes )
         {
-            try {
-                var node = formula_nodes[i];
-                var formula = node.data('raw_value');
-                var context = {
-                    'root':$('#document').data('document'),
-                    'curr':node
-                };
-
-                var value = parser.parse_formula(formula, context);
-
-                node.data('display_value', value);
-                node.data('$value_display').text(value);
-            }catch(e){
-                node.data('$value_display').text('incalculable!');
-                console.log(e);
-                // don't re-throw; continue to next formula
-            }
+            formula_nodes[i].data('display_value', 'ERR:CIRCULAR REF');
         }
+
+        do {
+            prev_num_changes = num_changes;
+            num_changes = 0;
+            for( var i in formula_nodes )
+            {
+                try {
+                    var node = formula_nodes[i];
+                    var formula = node.data('raw_value');
+                    var context = {
+                        'root':$('#document').data('document'),
+                        'curr':node
+                    };
+
+                    var value = parser.parse_formula(formula, context);
+
+                    if( value !== node.data('display_value') )
+                    {
+                        num_changes++;
+                    }
+
+                    node.data('display_value', value);
+                    node.data('$value_display').text(value);
+
+                }catch(e){
+                    node.data('$value_display').text('incalculable!');
+                    console.log(e);
+                    // don't re-throw; continue to next formula
+                }
+            }
+            console.log("num_changes:", num_changes, "\nprev_num_changes:", prev_num_changes);
+        } while (num_changes !== prev_num_changes);
     }
 
     $(function initialize(){
