@@ -84,7 +84,7 @@
     function gentree(data, primaryvalue, summary_holder)
     {
         function addbackrefs($$children, $parent, parent_name) {
-            for (var i in $$children) {
+            for (var i = 0; i < $$children.length; i++) {
                 $$children[i].data(parent_name, $parent);
             }
         }
@@ -119,7 +119,7 @@
         function $make_type_selector(type) {
             var $type_selector = $('<select></select');
             var types = ['null','boolean','number','string', 'formula'];
-            for(var i in types)
+            for(var i = 0; i < types.length; i++)
             {
                 var cur = types[i];
                 var sel = ((cur == type) ? 'selected' : '');
@@ -198,7 +198,7 @@
                 var allkeys = [];
                 var has_other = $.inArray('OTHER', config_keys) > -1;
 
-                for(var i in keys)
+                for(var i = 0; i < keys.length; i++)
                 {
                     key = keys[i];
                     if( $.inArray(key, config_keys) > -1  )
@@ -209,7 +209,7 @@
                     }
                 }
 
-                for(i in config_keys)
+                for(i = 0; i < config_keys.length; i++)
                 {
                     key = config_keys[i];
                     if( key === 'OTHER' )
@@ -312,7 +312,7 @@
             case 'object':
                 (function printcomposition(){
                     var $$fields = htmlnode.data('$$fields');
-                    for( var i in $$fields )
+                    for( var i = 0; i < $$fields.length; i++ )
                     {
                         var $field = $$fields[i];
                         var sel = $field.data('selector');
@@ -336,7 +336,7 @@
         {
             var a = []; var o = {};
             var $$fields = htmlnode.data('$$fields');
-            for( var i in $$fields )
+            for( var i = 0; i < $$fields; i++ )
             {
                 var $field = $$fields[i];
                 var field = extractdata($field.data('$data_node'));
@@ -511,7 +511,7 @@
         var num_changes = 0;
         var prev_num_changes;
 
-        for( i in formula_nodes )
+        for( i = 0; i < formula_nodes.length; i++ )
         {
             formula_nodes[i].data('display_value', 'ERR:CIRCULAR REF');
         }
@@ -519,7 +519,7 @@
         do {
             prev_num_changes = num_changes;
             num_changes = 0;
-            for( i in formula_nodes )
+            for( i = 0; i < formula_nodes.length; i++ )
             {
                 try {
                     var node = formula_nodes[i];

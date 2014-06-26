@@ -22,11 +22,11 @@
     }
     function selectors(node)
     {
-        var kids = node.data('$$fields');
+        var $$fields = node.data('$$fields');
         var sels = [];
-        for( var i in kids )
+        for( var i = 0; i < $$fields.length; i++ )
         {
-            sels.push(kids[i].data('selector'));
+            sels.push($$fields[i].data('selector'));
         }
         return sels;
     }
@@ -37,7 +37,7 @@
     function child(node, selector)
     {
         var $$fields = node.data('$$fields');
-        for( var i in $$fields ) {
+        for( var i = 0; i < $$fields.length; i++ ) {
             var $field = $$fields[i];
             var s = $field.data('selector');
             if( s === selector ) {

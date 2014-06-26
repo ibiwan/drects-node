@@ -45,8 +45,10 @@
                 if( sel === '(STAR)' ) // (star)
                 {
                     var ret = [];
-                    for( var s in o.selectors(curr_node) )
+                    var selectors = o.selectors(curr_node);
+                    for( var i = 0; i < selectors.length; i++ )
                     {
+                        var s = selectors[i];
                         var e = o.child(curr_node, s);
                         var elements = valuegetter(root_node, e, subpath);
                         log('debug', "got elements:", elements);
