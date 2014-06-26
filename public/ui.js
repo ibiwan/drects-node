@@ -535,11 +535,13 @@
                     $label_edit.hide();
                     $label.show();
 
-                    $field.data('selector', new_key);
-                    $label.html(new_key);
+                    if( changed ) {
+                        $field.data('selector', new_key);
+                        $label.html(new_key);
 
-                    calculateFormulas();
-                    save();
+                        calculateFormulas();
+                        save();
+                    }
                 }
             }
         });
