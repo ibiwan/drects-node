@@ -57,7 +57,7 @@
       "levels": [
         {
           "class": "rogue",
-          "level": 12
+          "level": 13
         },
         {
           "class": "assassin",
@@ -103,7 +103,7 @@
       ]
     }
   ],
-  "plus_field": "+",
+  "plus_field": "++",
   "array_of_prims": [
     1,
     2,

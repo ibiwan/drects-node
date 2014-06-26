@@ -5,18 +5,17 @@
             require('./include/jquery'),
             require('./include/jquery-ui'),
             require('./parser'),
-            require('./lexer'),
             require('./log').log
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // "amd" (require.js)
         define(
-            ['jquery', 'jquery-ui', './parser', './lexer', './log'],
-            function ($, jqueryui, parser, lexer, log) {
-                return init($, jqueryui, parser, lexer, log.log);
+            ['jquery', 'jquery-ui', './parser', './log'],
+            function ($, jqueryui, parser, log) {
+                return init($, jqueryui, parser, log.log);
             });
     }
-})(function($, jqueryui, parser, lex, log){ // init
+})(function($, jqueryui, parser, log){ // init
 
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -494,28 +493,6 @@
         });
     }
 
-    function parse_formula(formula, context)
-    {
-        var tokenstream;
-
-        try {
-            tokenstream = lex.lex(formula);
-            log('lex', tokenstream);
-        }catch(e){
-            log('lex_error', e);
-            log('lex_error', e.stack);
-            throw(e);
-        }
-
-        try {
-            return parser.parse(tokenstream, context);
-        }catch(e){
-            log('parse_error', e);
-            log('parse_error', e.stack);
-            throw(e);
-        }
-    }
-
     function calculateFormulas()
     {
         for( var i in formula_nodes )
@@ -528,7 +505,7 @@
                     'curr':node
                 };
 
-                var value = parse_formula(formula, context);
+                var value = parser.parse_formula(formula, context);
 
                 node.data('display_value', value);
                 node.data('$value_display').text(value);

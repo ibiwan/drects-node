@@ -1,7 +1,7 @@
 #!/usr/local/bin/node
 
 /*
- *  Testing harness, for use from command line, which goes through a list of nodes and formulas and lexes/parses/calculates each.
+ *  Testing harness, for use from command line, which goes through a list of nodes and formulas and parses/calculates each.
  */
 
 
@@ -12,37 +12,13 @@
         module.exports = init(
             parser,
             require('./public/log').log,
-            require('./public/lexer'),
             require('fs')
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // amd (require.js)
-        define(['./parser', './log', './lexer', 'fs'], function (parser, log, lexer, fs) {return init(parser, log.log, lexer, fs);});
+        define(['./parser', './log', 'fs'], function (parser, log, fs) {return init(parser, log.log, fs);});
     }
-})(function(parser, log, lex, fs){ // init
-    function parse_formula(formula, io)
-    {
-        var tokenstream;
-        try {
-            tokenstream = lex.lex(formula);
-            log('lex', tokenstream);
-        }catch(e){
-            log('lex_error', e);
-            log('lex_error', e.stack);
-            return false;
-        }
-        try {
-            var formula_io = {'context':io.context};
-            parser.parse(tokenstream, formula_io);
-            io.value = formula_io.value;
-        }catch(e){
-            log('parse_error', e);
-            log('parse_error', e.stack);
-            return false;
-        }
-        return true;
-    }
-
+})(function(parser, log, fs){ // init
 
     function runtestitem(tree, test_item)
     {
@@ -52,18 +28,19 @@
 
         log('formula', "candidate:", f);
 
-        var io = {'context':{'root':tree, 'curr':n}};
+        var context = {'root':tree, 'curr':n};
+        var success = true;
         try{
-            result = parse_formula(f, io);
+            value = parser.parse_formula(f, context);
         }catch(e){
             log('parse_error', e);
             log('parse_error', e.stack);
-            return false;
+            success = false;
         }
 
-        log('testing', {'success':result, 'io':io});
-        if( result !== r.success ) throw "testing: result was " + result + "; should have been " + r.success;
-        if( io.value !== r.value ) throw "testing: value was " + io.value + "; should have been " + r.value;
+        log('testing', {'success':success, 'value':value});
+        if( success !== r.success ) throw "testing: result was " + success + "; should have been " + r.success;
+        if( value !== r.value ) throw "testing: value was " + value + "; should have been " + r.value;
         log('testing', "result and value were correct.");
         log('padding', '\n');
     }
@@ -100,7 +77,7 @@
             },
             {
                 'node'   : root.characters[0].abilities,
-                'text'   : '=sum(/characters/*/name=exultation/../levels/*/level)',
+                'text'   : '=sum(/characters/*/name=exultation/../../levels/*/level)',
                 'result' : {'success':true, 'value':133}
             },
         ];

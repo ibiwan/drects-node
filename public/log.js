@@ -1,12 +1,11 @@
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
-        // node
-        module.exports = init();
+        module.exports = init('node');
     } else if ( typeof define === 'function' && define.amd ) {
-        // amd (require.js)
-        define([], function () {return init();});
+        // require.js mode
+        define([], function () {return init('amd');});
     }
-})(function(){ // init
+})(function(mode){ // init
     var out = {
         'padding'     : true,
         'log_type'    : true,
@@ -35,14 +34,14 @@
             {
                 values.unshift(type.toUpperCase() + ':');
             }
-            // for( var i = 0; i < values.length; i++ )
-            // {
-            //     console.log(i, values[i]);
-            // }
             try{
-                console.log(values);
+                if( mode === 'node' )
+                {
+                    console.log.apply(this, values); // why did this stop working?
+                } else {
+                    console.log(values);
+                }
                 // console.log((new Error).stack);
-                // console.log.apply(this, values); // why did this stop working?
             } catch (e) {
                 console.log("error in logging, so I record it by... logging!?");
                 console.log(e);

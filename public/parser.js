@@ -4,13 +4,13 @@
         module.exports = init(
             require('./lexer'),
             require('./functions').functions,
-            require('./jsonobject'),
+            require('./jsonobject'), // note: use json objects from command line
             require('./log').log
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // amd (require.js)
         define(
-            ['./lexer', './functions', './drectsobject', './log'],
+            ['./lexer', './functions', './drectsobject', './log'], // use custom drects object in web
             function (lexer, functions, myobject, log) {
                 return init(lexer, functions.functions, myobject, log.log);
             });
@@ -18,7 +18,7 @@
 })(function(lex, functions, o, log){ // init
     function valuegetter(root_node, curr_node, path_elements)
     {
-        log('path', "valuegetter:", path_elements, curr_node);
+        log('path', "\n\nvaluegetter; \nPATH:", path_elements, "\nCURR:", curr_node);
 
         if( path_elements.length === 0 )
         {
@@ -52,7 +52,7 @@
                         log('debug', "got elements:", elements);
                         ret = ret.concat(elements);
                     }
-                    log('debug', "returning ret:", ret);
+                    log('debug', "collection: returning ret:", ret);
                     return ret;
                 } else {
                     var field = o.child(curr_node,sel);
@@ -122,6 +122,7 @@
             'prefixes' : function get_p_number_prefixes(){return ['DIGITS', 'NEG'];},
             'parse'    : function p_number_parse(v, io) {
                 log('parse', "number:", v[0]);
+
                 var i = 0, value;
                 var negate = false;
                 if( v[i].token === 'NEG' )
@@ -146,6 +147,7 @@
             'prefixes' : function get_p_string_prefixes(){return ['STRING'];},
             'parse'    : function p_string_parse(v, io) {
                 log('parse', "string:", v[0]);
+
                 if(v[0] && v[0].token !== 'STRING') throw "parse error: string must be string.";
                 io.value = v[0].tag;
                 io.remainder = v.slice(1);
@@ -156,6 +158,7 @@
             'prefixes' : function get_p_bool_prefixes(){return ['BOOL'];},
             'parse'    : function p_bool_parse(v, io) {
                 log('parse', "bool:", v[0]);
+
                 asserttoken(v, 0, 'BOOL', "bool must be bool.");
 
                 var tag = v[0].tag.toLowerCase();
@@ -177,6 +180,7 @@
             'prefixes' : function get_p_null_prefixes(){return ['NULL'];},
             'parse'    : function p_null_parse(v, io) {
                 log('parse', "null:", v[0]);
+
                 if( !v[0] || v[0].token !== 'NULL' )
                 {
                     throw "parse error: null must be null";
@@ -364,6 +368,8 @@
 
                 // parse subpath
 
+                // console.log("io before:", io, path_io);
+
                 var path_io = {'context':io.context};
 
                 productions.p_subpath.parse(remainder, path_io);
@@ -395,6 +401,7 @@
             },
             'parse'    : function p_function_call_parse(v, io) {
                 log('parse', "function_call:", v[0]);
+
                 for(var i = 0; i < p_function_call_cases.length; i++)
                 {
                     var f_case = p_function_call_cases[i];
@@ -444,6 +451,7 @@
             },
             'parse'    : function p_scalar_parse(v, io) {
                 log('parse', "scalar:", v[0]);
+
                 for(var i = 0; i < p_scalar_cases.length; i++)
                 {
                     var prod_name = p_scalar_cases[i];
@@ -484,14 +492,32 @@
         }
     };
 
-    function parse(tokens, context) {
-        var io = {'context':context};
-        productions.p_formula.parse(tokens, io);
-        return io.value;
+    function parse_formula(formula, context)
+    {
+        var tokenstream;
+
+        try {
+            tokenstream = lex.lex(formula);
+            log('lex', tokenstream);
+        }catch(e){
+            log('lex_error', e);
+            log('lex_error', e.stack);
+            throw(e);
+        }
+
+        try {
+            var io = {'context':context};
+            productions.p_formula.parse(tokenstream, io);
+            return io.value;
+        }catch(e){
+            log('parse_error', e);
+            log('parse_error', e.stack);
+            throw(e);
+        }
     }
 
     return {
-        'parse' : parse,
+        'parse_formula' : parse_formula,
     };
 });
 
