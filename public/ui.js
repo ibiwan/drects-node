@@ -507,10 +507,11 @@
 
     function calculateFormulas()
     {
+        var i;
         var num_changes = 0;
         var prev_num_changes;
 
-        for( var i in formula_nodes )
+        for( i in formula_nodes )
         {
             formula_nodes[i].data('display_value', 'ERR:CIRCULAR REF');
         }
@@ -518,7 +519,7 @@
         do {
             prev_num_changes = num_changes;
             num_changes = 0;
-            for( var i in formula_nodes )
+            for( i in formula_nodes )
             {
                 try {
                     var node = formula_nodes[i];

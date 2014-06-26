@@ -10,8 +10,8 @@
         {
           "class": "dervish",
           "level": 1,
-          "prestige": true,
-          "advancing": true
+          "advancing": true,
+          "prestige": true
         }
       ],
       "abilities": [
@@ -109,6 +109,8 @@
     2,
     3
   ],
+  "circular_a": "=/circular_a",
+  "circular_b": "=/circular_a",
   "rex-ordering": [
     "name",
     "player",
