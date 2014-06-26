@@ -192,28 +192,35 @@
             function sortkeys(keys)
             {
                 var key;
+                var config_keys = config.forkey('rex-ordering');
                 var sortedkeys = [];
                 var whateverkeys = [];
                 var allkeys = [];
-                for(var i = 0; i < keys.length; i++)
+                var has_other = $.inArray('OTHER', config_keys) > -1;
+
+                for(var i in keys)
                 {
                     key = keys[i];
-                    if( $.inArray(key, config.forkey('rex-ordering')) > -1 )
+                    if( $.inArray(key, config_keys) > -1  )
                     {
                         sortedkeys.push(key);
                     } else {
                         whateverkeys.push(key);
                     }
                 }
-                for(i = 0; i < config.forkey('rex-ordering').length; i++)
+
+                for(i in config_keys)
                 {
-                    key = config.forkey('rex-ordering')[i];
-                    if($.inArray(key, sortedkeys) > -1)
+                    key = config_keys[i];
+                    if( key === 'OTHER' )
+                    {
+                        allkeys = allkeys.concat(whateverkeys);
+                    } else if( $.inArray(key, sortedkeys) > -1 )
                     {
                         allkeys.push(key);
                     }
                 }
-                allkeys = allkeys.concat(whateverkeys);
+
                 return allkeys;
             }
             function getkeys(obj)
@@ -532,7 +539,6 @@
                     // don't re-throw; continue to next formula
                 }
             }
-            console.log("num_changes:", num_changes, "\nprev_num_changes:", prev_num_changes);
         } while (num_changes !== prev_num_changes);
     }
 
