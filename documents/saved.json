@@ -18,7 +18,7 @@
         {
           "ability": "Str",
           "total": 20,
-          "mod": "=/plus_field"
+          "mod": "=floor(div(add(../total, -10), 2))"
         },
         {
           "ability": "Dex",
@@ -95,22 +95,9 @@
         "age": "22 years",
         "height": "5 ' 7\"",
         "weight": "170 lb."
-      },
-      "somecat": "=cat(../sources/0, ../sources/1)",
-      "sources": [
-        "a",
-        "b"
-      ]
+      }
     }
   ],
-  "plus_field": "+",
-  "array_of_prims": [
-    1,
-    2,
-    3
-  ],
-  "circular_a": "=/circular_a",
-  "circular_b": "=/circular_a",
   "rex-ordering": [
     "name",
     "player",

@@ -97,20 +97,23 @@
             $data_node.data('state', 'shown');
 
             var $controller = $newdiv('controller', '<i class="' + collapsers[type + '-open'] + '"></i>');
-            var $label      = $newdiv('label', selector);
+            var $label      = $newdiv('label', selector).addClass(type+'label');
             var $label_edit = $('<input type="text" value=""></input>').hide();
 
             var $labelstack = $newdiv('labelstack', '')
-                .append($controller).data('$controller', $controller)
-                .append(     $label).data(     '$label',      $label)
-                .append($label_edit).data('$label_edit', $label_edit)
+                .append($controller)
+                .append(     $label)
+                .append($label_edit)
                 .addClass((type === 'element') ? 'vertical' : 'horizontal');
 
             var $field = $newdiv(type, '')
                 .append($labelstack) // .data('$labelstack', $labelstack) // nobody seems to care
                 .append ($data_node).data( '$data_node',  $data_node)
                 .data('selector', selector.toString())
-                .data('type', type);
+                .data('type', type)
+                .data('$controller', $controller)
+                .data(     '$label',      $label)
+                .data('$label_edit', $label_edit);
 
             addbackrefs([$labelstack, $controller, $label, $label_edit, $data_node], $field, '$field');
 
@@ -336,16 +339,19 @@
         {
             var a = []; var o = {};
             var $$fields = htmlnode.data('$$fields');
-            for( var i = 0; i < $$fields; i++ )
+            for( var i = 0; i < $$fields.length; i++ )
             {
                 var $field = $$fields[i];
-                var field = extractdata($field.data('$data_node'));
+                var $data_node = extractdata($field.data('$data_node'));
+
+                if( $data_node.data )
+
                 if( type === 'array' )
                 {
-                    a.push(field);
+                    a.push($data_node);
                 } else {
                     var key = $field.data('selector');
-                    o[key] = field;
+                    o[key] = $data_node;
                 }
             }
             return type === 'array' ? a : o;
@@ -407,14 +413,15 @@
         }
     }
 
-    function stringToBoolean(string){
-        switch(string.toLowerCase()){
-            case "true": case "yes": case "1": return true;
-            default: return false;
-        }
-    }
-    function handleEdit(eventObject)
+
+    function handleScalarEdit(eventObject)
     {
+        function stringToBoolean(string){
+            switch(string.toLowerCase()){
+                case "true": case "yes": case "1": return true;
+                default: return false;
+            }
+        }
         function validate(type, value)
         {
             var validators = {
@@ -451,13 +458,12 @@
         var $value_edit    = $scalar.data('$value_edit');
 
         var old_value = $scalar.data('raw_value').toString();
-        $value_edit.val(old_value);
 
+        $value_edit.val(old_value).show();
         $value_display.hide();
         $type_selector.show();
-        $value_edit.show();
 
-        $value_edit.keypress(function editkeypress(event) {
+        $value_edit.keypress(function valueeditkeypress(event) {
             if( event.which == 13 ) { // return key
                 var new_value = $value_edit.val();
                 var new_type  = $type_selector.val();
@@ -502,6 +508,40 @@
             var new_type = $(this).val(); // "this" here is the drop-down
             var defaults = {'null':'null', 'boolean':'false', 'number':'0', 'string':'text', 'formula':'='};
             $value_edit.val( (new_type !== old_type) ? defaults[new_type] : old_value );
+        });
+    }
+
+    function handleKeyEdit(eventObject)
+    {
+        function validateKey(value) {
+            return value.match(/^[\w-_]*$/);
+        }
+        var $label      = $(this);
+        var $field      = $label.data('$field');
+        var $label_edit = $field.data('$label_edit');
+
+        var old_key = $field.data('selector');
+
+        $label_edit.show().val(old_key);
+        $label.hide();
+
+        $label_edit.keypress(function labeleditkeypress(event){
+            if( event.which == 13 ) { // return key
+                var new_key = $label_edit.val();
+                var changed   = new_key != old_key;
+                if( !changed || validateKey(new_key) )
+                {
+                    console.log(new_key);
+                    $label_edit.hide();
+                    $label.show();
+
+                    $field.data('selector', new_key);
+                    $label.html(new_key);
+
+                    calculateFormulas();
+                    save();
+                }
+            }
         });
     }
 
@@ -562,7 +602,8 @@
                     .data('document', doc);
 
                 $('.controller').click(handleToggle);
-                $('.scalar').dblclick(handleEdit);
+                $('.scalar').dblclick(handleScalarEdit);
+                $('.memberlabel').dblclick(handleKeyEdit);
 
                 calculateFormulas();
 
