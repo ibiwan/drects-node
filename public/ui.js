@@ -221,6 +221,11 @@
                     }
                 }
 
+                if( !has_other )
+                {
+                    allkeys = allkeys.concat(whateverkeys);
+                }
+
                 return allkeys;
             }
             function getkeys(obj)

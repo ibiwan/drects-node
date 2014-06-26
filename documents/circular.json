@@ -1,0 +1,6 @@
+{
+  "ok":"ok",
+  "self":"=/self",
+  "circ_a":"=/circ_b",
+  "circ_b":"=/circ_a"
+}
