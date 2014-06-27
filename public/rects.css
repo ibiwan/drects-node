@@ -39,7 +39,7 @@
     opacity : 0.0 !important;
 }
 /*.string, .null, .number, .boolean, .member, .element, .value_display, .scalar{*/
-.value_display, .member, .element, .summary {
+.value_display, .member, .element, .summary, .contextmenu {
     outline : 1px solid black;
 }
 #message {

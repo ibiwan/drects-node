@@ -113,7 +113,8 @@
                 .data('type', type)
                 .data('$controller', $controller)
                 .data(     '$label',      $label)
-                .data('$label_edit', $label_edit);
+                .data('$label_edit', $label_edit)
+                .data('$labelstack', $labelstack);
 
             addbackrefs([$labelstack, $controller, $label, $label_edit, $data_node], $field, '$field');
 
@@ -296,7 +297,7 @@
     function printdom(htmlnode, depth)
     {
         if( !depth ) depth = 0;
-        var tab = Array(depth+1).join("  ");
+        var tab  = Array(depth+1).join("  ");
         var type = htmlnode.data('type');
         switch(type)
         {
@@ -327,39 +328,39 @@
         }
     }
 
-    function extractdata(htmlnode)
-    {
-        var type = htmlnode.data('type');
-        if( ['string', 'number', 'boolean', 'null', 'formula'].indexOf(type) > -1 )
-        {
-            var t = htmlnode.data('raw_value');
-            return t;
-        }
-        if(['array', 'object'].indexOf(type) > -1 )
-        {
-            var a = []; var o = {};
-            var $$fields = htmlnode.data('$$fields');
-            for( var i = 0; i < $$fields.length; i++ )
-            {
-                var $field = $$fields[i];
-                var $data_node = extractdata($field.data('$data_node'));
-
-                if( $data_node.data )
-
-                if( type === 'array' )
-                {
-                    a.push($data_node);
-                } else {
-                    var key = $field.data('selector');
-                    o[key] = $data_node;
-                }
-            }
-            return type === 'array' ? a : o;
-        }
-    }
-
     function save()
     {
+        function extractdata(htmlnode)
+        {
+            var type = htmlnode.data('type');
+            if( ['string', 'number', 'boolean', 'null', 'formula'].indexOf(type) > -1 )
+            {
+                var t = htmlnode.data('raw_value');
+                return t;
+            }
+            if(['array', 'object'].indexOf(type) > -1 )
+            {
+                var a = []; var o = {};
+                var $$fields = htmlnode.data('$$fields');
+                for( var i = 0; i < $$fields.length; i++ )
+                {
+                    var $field = $$fields[i];
+                    var $data_node = extractdata($field.data('$data_node'));
+
+                    if( $data_node.data )
+
+                    if( type === 'array' )
+                    {
+                        a.push($data_node);
+                    } else {
+                        var key = $field.data('selector');
+                        o[key] = $data_node;
+                    }
+                }
+                return type === 'array' ? a : o;
+            }
+        }
+
         var savedata = extractdata($('#document').data('document'));
         config.save(savedata);
         var savejson = JSON.stringify(savedata);
@@ -387,6 +388,7 @@
         var $field      = $(this).data('$field');
         var $data_node  = $field.data('$data_node');
         var $summary    = $field.data('$summary');
+        var $labelstack = $field.data('$labelstack');
 
         // update collapser icon
         var direction  = ($data_node.data('state') == 'shown') ? 'close' : 'open';
@@ -400,19 +402,25 @@
             if( $summary ) $summary.hide();
             $data_node.show().data('state','shown');
 
+            if( type === 'element' )
+                $labelstack.removeClass('horizontal').addClass('vertical');
+
             setTimeout(function(){
                 $data_node.removeClass('hidden');
             }, 10);
        } else {
             $data_node.addClass('hidden');
+
             setTimeout(function(){
                 $data_node.hide().data('state','hidden');
                 if( $summary ) $summary.show();
                 $field.hide().show();
+
+                if( type === 'element' )
+                    $labelstack.removeClass('vertical').addClass('horizontal');
             }, 500);
         }
     }
-
 
     function handleScalarEdit(eventObject)
     {
@@ -590,8 +598,50 @@
         } while (num_changes !== prev_num_changes);
     }
 
+    function buildContextMenu()
+    {
+        var $menu = $('#contextmenu');
+        $menu
+            .addClass('contextmenu')
+            .css({
+                position   : 'absolute',
+                'background-color' : '#fff',
+            });
+        var $item_delete = $('<div id="delete">Delete Node</div>');
+        $menu.append($item_delete);
+    }
+
+    function popUpContextMenu(eventObject)
+    {
+        eventObject.preventDefault();
+
+        var $menu = $('#contextmenu');
+        var $label = $(this);
+
+        $menu.offset($label.offset()).show();
+    }
+
+    function popDownContextMenu(eventObject)
+    {
+        if(!eventObject.isDefaultPrevented())
+        {
+            $('#contextmenu').hide();
+        }
+    }
+
+    function registerHandlers()
+    {
+        $('.controller').click(handleToggle);
+        $('.scalar').dblclick(handleScalarEdit);
+        // $('.memberlabel').dblclick(handleKeyEdit);
+        $('.label').click(popUpContextMenu);
+        $(document).click(popDownContextMenu);
+    }
+
     $(function initialize(){
         $("body").disableSelection();
+        buildContextMenu();
+
         $.ajax("getdoc")
             .done(function gotjson(file_data, stringStatus, jqXHR){
                 config.load(file_data);
@@ -603,10 +653,7 @@
                     .append(doc)
                     .data('document', doc);
 
-                $('.controller').click(handleToggle);
-                $('.scalar').dblclick(handleScalarEdit);
-                $('.memberlabel').dblclick(handleKeyEdit);
-
+                registerHandlers();
                 calculateFormulas();
 
                 // printdom(doc);

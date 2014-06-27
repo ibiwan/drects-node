@@ -102,14 +102,15 @@ function setupServer(secret, db)
         'login'    : function login(req, res)
             {
                 console.log("login()");
+
                 // accepts form results and checks authentication.
                 if ( !(req.body && req.body.user && req.body.password) ) {
                     console.log("no user/pass offered");
                     return res.redirect('/');
                 }
+
                 var user = req.body.user;
                 var pass = req.body.password;
-
                 console.log("login attempted:", user, pass);
 
                 db.get("SELECT * FROM user WHERE username = ?", [user], function(err, row){
@@ -139,6 +140,7 @@ function setupServer(secret, db)
         'logout'   : function logout(req, res)
             {
                 console.log("logout()");
+
                 // invalidate session and redirect to landing
                 req.session.destroy();
                 return res.redirect('/');
@@ -146,13 +148,11 @@ function setupServer(secret, db)
 
         'files'    : function files(req, res)
             {
-                console.log("files()");
-
                 // does not require session
 
                 // serve up handy dandy js and css files
                 console.log("files("+req.params[0]+")");
-                res.sendfile(__dirname + '/public/' + req.params[0], function(err){console.log(err);});
+                res.sendfile(__dirname + '/public/' + req.params[0], function(err){if(err)console.log(err);});
             },
         'listdocs' : function listdocs(req, res)
             {
@@ -163,7 +163,6 @@ function setupServer(secret, db)
                     var out = '';
                     for(var i = 0; i < files.length; i++)
                     {
-                        console.log(files[i]);
                         out += "<a href='/viewer/" + files[i] + "'>" + files[i] + "</a><br />";
                     }
                     res.send(out);
@@ -178,9 +177,11 @@ function setupServer(secret, db)
                 {
                     req.session.filename = req.params.filename;
                     return res.redirect('/viewer');
+                } else if( !req.session.filename ) {
+                    return res.redirect('/listdocs');
                 }
 
-                res.sendfile(__dirname + "/templates/viewer.html", function(err){console.log(err);});
+                res.sendfile(__dirname + "/templates/viewer.html", function(err){if(err)console.log(err);});
             },
         'getdoc' : function getdoc(req, res)
             {
@@ -200,9 +201,7 @@ function setupServer(secret, db)
             {
                 console.log("savedoc()");
 
-                var filedata = req.body.file;
-
-                filedata = JSON.stringify(JSON.parse(filedata), null, '  ');
+                var filedata = JSON.stringify(JSON.parse(req.body.file), null, '  ');
 
                 var filename = __dirname + "/documents/saved.json";
                 fs.writeFile(filename, filedata, {}, function(err){
