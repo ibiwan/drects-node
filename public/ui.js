@@ -5,17 +5,19 @@
             require('./include/jquery'),
             require('./include/jquery-ui'),
             require('./parser'),
-            require('./log').log
+            require('./log').log,
+            require('./treebuilder'),
+            require('./config')
         );
     } else if ( typeof define === 'function' && define.amd ) {
         // "amd" (require.js)
         define(
-            ['jquery', 'jquery-ui', './parser', './log'],
-            function ($, jqueryui, parser, log) {
-                return init($, jqueryui, parser, log.log);
+            ['jquery', 'jquery-ui', './parser', './log', './treebuilder', './config'],
+            function ($, jqueryui, parser, log, treebuilder, config) {
+                return init($, jqueryui, parser, log.log, treebuilder, config);
             });
     }
-})(function($, jqueryui, parser, log){ // init
+})(function($, jqueryui, parser, log, treebuilder, config){ // init
 
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -24,274 +26,8 @@
         'member-close'  : 'fa fa-chevron-left'
     };
     var formula_nodes = [];
-
-    var config = (function(){
-        var _config = {};
-        var configlabels = ['rex-ordering', 'rex-primaries'];
-        var loadconfig = function loadconfig(tree)
-        {
-            for(var i = 0; i < configlabels.length; i++)
-            {
-                _config[configlabels[i]] = [];
-            }
-            loadconfiginner(tree);
-        };
-        var loadconfiginner = function loadconfiginner(tree)
-            {
-                if( tree instanceof Array )
-                {
-                    for( var i = 0; i < tree.length; i++ )
-                    {
-                        loadconfiginner(tree[i]);
-                    }
-                    return;
-                }
-                if( tree instanceof Object )
-                {
-                    for( var key in tree )
-                    {
-                        if( $.inArray(key, configlabels) > -1)
-                        {
-                            _config[key] = tree[key];
-                            delete tree[key];
-                        }
-                        else
-                        {
-                            loadconfiginner(tree[key]);
-                        }
-                    }
-                }
-            };
-        var saveconfig = function saveconfig(tree)
-            {
-                for( var i = 0; i < configlabels.length; i++ )
-                {
-                    var label = configlabels[i];
-                    tree[label] = _config[label];
-                }
-            };
-        var forkey = function forkey(key)
-        {
-            return _config[key];
-        };
-        return { // interface
-            'load'   : loadconfig,
-            'save'   : saveconfig,
-            'forkey' : forkey
-        };
-    })();
-
-    function gentree(data, primaryvalue, summary_holder)
-    {
-        function addbackrefs($$children, $parent, parent_name) {
-            for (var i = 0; i < $$children.length; i++) {
-                $$children[i].data(parent_name, $parent);
-            }
-        }
-        function $newdiv(type, value)
-        {
-            return $('<div>' + value + '</div>').addClass(type);
-        }
-        function $make_field_stack(type, selector, $data_node)
-        {
-            $data_node.data('state', 'shown');
-
-            var $controller = $newdiv('controller', '<i class="' + collapsers[type + '-open'] + '"></i>');
-            var $label      = $newdiv('label', selector).addClass(type+'label');
-            var $label_edit = $('<input type="text" value=""></input>').hide();
-
-            var $labelstack = $newdiv('labelstack', '')
-                .append($controller)
-                .append(     $label)
-                .append($label_edit)
-                .addClass((type === 'element') ? 'vertical' : 'horizontal');
-
-            var $field = $newdiv(type, '')
-                .append($labelstack) // .data('$labelstack', $labelstack) // nobody seems to care
-                .append ($data_node).data( '$data_node',  $data_node)
-                .data('selector', selector.toString())
-                .data('type', type)
-                .data('$controller', $controller)
-                .data(     '$label',      $label)
-                .data('$label_edit', $label_edit)
-                .data('$labelstack', $labelstack);
-
-            addbackrefs([$labelstack, $controller, $label, $label_edit, $data_node], $field, '$field');
-
-            return $field;
-        }
-        function $make_type_selector(type) {
-            var $type_selector = $('<select></select');
-            var types = ['null','boolean','number','string', 'formula'];
-            for(var i = 0; i < types.length; i++)
-            {
-                var cur = types[i];
-                var sel = ((cur == type) ? 'selected' : '');
-                var $option = $('<option value="' + cur + '" ' + sel + '>' + cur + '</option>');
-                $type_selector.append($option);
-            }
-
-            return $type_selector;
-        }
-
-        function $make_scalar(type, data)
-        {
-            var $value_display = $newdiv('value_display', data).addClass(type);
-            var $type_selector = $make_type_selector(type).hide();
-            var $value_edit    = $('<input type="text" value=""></input>').hide();
-
-            var $scalar = $newdiv('scalar', '')
-                .addClass('horizontal')
-
-                .append($value_display).data('$value_display', $value_display)
-                .append($type_selector).data('$type_selector', $type_selector)
-                .append(   $value_edit).data(   '$value_edit',    $value_edit)
-
-                .data('type',          type)
-                .data('raw_value',     data)
-                .data('display_value', data) // will only differ for formula nodes
-            ;
-
-            addbackrefs([$value_display, $type_selector, $value_edit], $scalar, '$scalar');
-
-            if( type === 'formula' )
-            {
-                formula_nodes.push($scalar);
-            }
-
-            return $scalar;
-        }
-        function $make_array(data, primaryvalue)
-        {
-            var $array = $newdiv('array', '').data('type', 'array');
-
-            var $$fields = [];
-            for( var i = 0; i < data.length; i++ )
-            {
-                var summary_holder = {};
-                var $data_node     = gentree(data[i], primaryvalue, summary_holder);
-                var summarystr     = (summary_holder.val === undefined)  ? '' : summary_holder.val;
-
-                var $field = $make_field_stack('element', i, $data_node)
-                    .data('$composition', $array);
-
-                if( summarystr )
-                {
-                    var $summary = $newdiv('summary', summarystr)
-                        .data('field', $field)
-                        .hide();
-                    $field
-                        .append($summary)
-                        .data('$summary', $summary);
-                }
-
-                $$fields.push($field);
-                $array.append($field);
-            }
-            $array.data('$$fields', $$fields);
-            return $array;
-        }
-        function $make_object(data, primaryvalue, summary_holder)
-        {
-            function sortkeys(keys)
-            {
-                var key;
-                var config_keys = config.forkey('rex-ordering');
-                var sortedkeys = [];
-                var whateverkeys = [];
-                var allkeys = [];
-                var has_other = $.inArray('OTHER', config_keys) > -1;
-
-                for(var i = 0; i < keys.length; i++)
-                {
-                    key = keys[i];
-                    if( $.inArray(key, config_keys) > -1  )
-                    {
-                        sortedkeys.push(key);
-                    } else {
-                        whateverkeys.push(key);
-                    }
-                }
-
-                for(i = 0; i < config_keys.length; i++)
-                {
-                    key = config_keys[i];
-                    if( key === 'OTHER' )
-                    {
-                        allkeys = allkeys.concat(whateverkeys);
-                    } else if( $.inArray(key, sortedkeys) > -1 )
-                    {
-                        allkeys.push(key);
-                    }
-                }
-
-                if( !has_other )
-                {
-                    allkeys = allkeys.concat(whateverkeys);
-                }
-
-                return allkeys;
-            }
-            function getkeys(obj)
-            {
-                var keys = [];
-                for( var key in obj )
-                {
-                    keys.push(key);
-                }
-                return sortkeys(keys);
-            }
-            var $object = $newdiv('object', '').data('type', 'object');
-
-            var $$fields = [];
-            var keys     = getkeys(data);
-            for( var i = 0; i < keys.length; i++ )
-            {
-                var key   = keys[i];
-                var pv    = config.forkey('rex-primaries')[key];
-                var usepv = (pv === undefined) ? primaryvalue : pv;
-                if( key === primaryvalue )
-                {
-                    summary_holder.val = data[key];
-                }
-
-                var $data_node = gentree(data[key], usepv, summary_holder);
-
-                var $field = $make_field_stack('member', key, $data_node)
-                    .data('$composition', $object);
-
-                $$fields.push($field);
-                $object.append($field);
-            }
-            $object.data('$$fields', $$fields);
-            return $object;
-        }
-
-        // if( data === null )
-        // {
-        //     data = "null"; // what's this fix?
-        // }
-
-        var t = typeof(data);
-        if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
-        {
-            if( data[0] === '=' )
-            {
-                t = "formula";
-            }
-            return $make_scalar(t, data);
-        }
-        if( data instanceof Array )
-        {
-            return $make_array(data, primaryvalue);
-        }
-        if( data instanceof Object )
-        {
-            return $make_object(data, primaryvalue, summary_holder);
-        }
-        console.trace();
-        console.log(data);
-        console.log("confused, now");
+    function track_formula_node(node){
+        formula_nodes.push(node);
     }
 
     function printdom(htmlnode, depth)
@@ -330,38 +66,42 @@
 
     function save()
     {
-        function extractdata(htmlnode)
+        function extractdata($html_node)
         {
-            var type = htmlnode.data('type');
+            console.log($html_node);
+            console.log($html_node.data());
+
+            var type = $html_node.data('type');
             if( ['string', 'number', 'boolean', 'null', 'formula'].indexOf(type) > -1 )
             {
-                var t = htmlnode.data('raw_value');
+                var t = $html_node.data('raw_value');
+                // console.log("t:", t);
                 return t;
             }
             if(['array', 'object'].indexOf(type) > -1 )
             {
                 var a = []; var o = {};
-                var $$fields = htmlnode.data('$$fields');
+                var $$fields = $html_node.data('$$fields');
                 for( var i = 0; i < $$fields.length; i++ )
                 {
                     var $field = $$fields[i];
-                    var $data_node = extractdata($field.data('$data_node'));
-
-                    if( $data_node.data )
+                    var data_node = extractdata($field.data('$data_node'));
 
                     if( type === 'array' )
                     {
-                        a.push($data_node);
+                        a.push(data_node);
                     } else {
                         var key = $field.data('selector');
-                        o[key] = $data_node;
+                        o[key] = data_node;
                     }
                 }
+                // console.log("a:", a, "o:", o);
                 return type === 'array' ? a : o;
             }
         }
 
         var savedata = extractdata($('#document').data('document'));
+        // console.log("savedata before adding config:", savedata);
         config.save(savedata);
         var savejson = JSON.stringify(savedata);
         console.log(savejson);
@@ -506,8 +246,7 @@
                         $value_display.html(display_value);
                         $scalar.attr('class', new_type + ' scalar');
 
-                        calculateFormulas();
-                        save();
+                        changeMade();
                     }
                 }
             }
@@ -519,13 +258,15 @@
         });
     }
 
-    function handleKeyEdit(eventObject)
+    function handleKeyEdit($field)
     {
         function validateKey(value) {
             return value.match(/^[\w-_]*$/);
         }
-        var $label      = $(this);
-        var $field      = $label.data('$field');
+        var $label = $field.data('$label');
+
+        console.log($field.data(), $label);
+
         var $label_edit = $field.data('$label_edit');
 
         var old_key = $field.data('selector');
@@ -547,8 +288,7 @@
                         $field.data('selector', new_key);
                         $label.html(new_key);
 
-                        calculateFormulas();
-                        save();
+                        changeMade();
                     }
                 }
             }
@@ -598,34 +338,69 @@
         } while (num_changes !== prev_num_changes);
     }
 
-    function buildContextMenu()
+    function handleDelete($node)
     {
-        var $menu = $('#contextmenu');
-        $menu
+        $parent = $node.data('$composition');
+        $$fields = $parent.data('$$fields');
+
+        for( var i = 0; i < $$fields.length; i++ )
+        {
+            if( $$fields[i] === $node ) {
+                $$fields.splice(i, 1); // in-place
+                $parent.data('$$fields', $$fields);
+                $node.remove();
+
+                changeMade();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function buildContextMenu($node, coords)
+    {
+        console.log($node, coords);
+        var $menu = $('#contextmenu')
             .addClass('contextmenu')
+            .offset(coords)
             .css({
                 position   : 'absolute',
                 'background-color' : '#fff',
-            });
-        var $item_delete = $('<div id="delete">Delete Node</div>');
-        $menu.append($item_delete);
+            })
+            .empty()
+            .show();
+
+        var menuitems = [
+            {id:"delete", text:"Delete Node", function: function(){handleDelete($node);}},
+            {id:"edit-label", text:"Edit Label", function: function(){handleKeyEdit($node);}},
+        ];
+
+        for(var i = 0; i < menuitems.length; i++)
+        {
+            var item = menuitems[i];
+            var $item = $('<div id="' + item.id + '" class="menuitem">' + item.text + '</div>');
+            $item.click(item.function);
+            $menu.append($item);
+        }
+
+        return $menu;
     }
 
     function popUpContextMenu(eventObject)
     {
+        var $label = $(this);
+        var $field = $label.data('$field');
+
         eventObject.preventDefault();
 
-        var $menu = $('#contextmenu');
-        var $label = $(this);
-
-        $menu.offset($label.offset()).show();
+        buildContextMenu($field, $label.offset());
     }
 
     function popDownContextMenu(eventObject)
     {
         if(!eventObject.isDefaultPrevented())
         {
-            $('#contextmenu').hide();
+            $('#contextmenu').offset({top:0,left:0}).hide();
         }
     }
 
@@ -633,21 +408,24 @@
     {
         $('.controller').click(handleToggle);
         $('.scalar').dblclick(handleScalarEdit);
-        // $('.memberlabel').dblclick(handleKeyEdit);
         $('.label').click(popUpContextMenu);
         $(document).click(popDownContextMenu);
     }
 
+    function changeMade()
+    {
+        calculateFormulas();
+        save();
+    }
+
     $(function initialize(){
         $("body").disableSelection();
-        buildContextMenu();
 
         $.ajax("getdoc")
             .done(function gotjson(file_data, stringStatus, jqXHR){
                 config.load(file_data);
 
-                var summary_holder = {};
-                var doc = gentree(file_data, "root", summary_holder);
+                var doc = treebuilder.build(file_data, config, collapsers, track_formula_node);
 
                 var $htmlroot = $('#document')
                     .append(doc)
