@@ -60,16 +60,17 @@
           "level": 12
         },
         {
-          "class": "assassin",
           "level": 2.7
         }
       ],
       "abilities": [
         {
-          "ability": "Str"
+          "ability": "Str",
+          "total": 17
         },
         {
-          "totals": 20
+          "ability": "Dex",
+          "total": 20
         },
         {
           "ability": "Con",

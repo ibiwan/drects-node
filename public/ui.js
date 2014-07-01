@@ -25,6 +25,7 @@
         'member-open'   : 'fa fa-chevron-down',
         'member-close'  : 'fa fa-chevron-left'
     };
+
     var formula_nodes = [];
     function track_formula_node(node){
         formula_nodes.push(node);
@@ -359,20 +360,21 @@
 
     function buildContextMenu($node, coords)
     {
-        console.log($node, coords);
+        console.log($node, coords.left, coords.top);
+
         var $menu = $('#contextmenu')
             .addClass('contextmenu')
-            .offset(coords)
+            .css(coords)
             .css({
                 position   : 'absolute',
                 'background-color' : '#fff',
             })
-            .empty()
-            .show();
+            .empty();
+            // .show();
 
         var menuitems = [
-            {id:"delete", text:"Delete Node", function: function(){handleDelete($node);}},
-            {id:"edit-label", text:"Edit Label", function: function(){handleKeyEdit($node);}},
+            {id:"delete",     text:"Delete Node", function: function(){handleDelete( $node);}},
+            {id:"edit-label", text: "Edit Label", function: function(){handleKeyEdit($node);}},
         ];
 
         for(var i = 0; i < menuitems.length; i++)
@@ -383,7 +385,9 @@
             $menu.append($item);
         }
 
-        return $menu;
+        $menu.show();
+
+        // return $menu;
     }
 
     function popUpContextMenu(eventObject)
