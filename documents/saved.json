@@ -21,7 +21,8 @@
           "mod": "=floor(div(add(../total, -10), 2))"
         },
         {
-          "mod": "=floor(div(add(../total, -10), 2))"
+          "ability": "Dex",
+          "total": 18
         },
         {
           "ability": "Con",

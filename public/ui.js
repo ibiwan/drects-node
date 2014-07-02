@@ -15,11 +15,11 @@
         // "amd" (require.js)
         define(
             ['jquery', 'jquery-ui', 'contextmenu', './parser', './log', './treebuilder', './config'],
-            function (a, b, contextmenu, parser, log, treebuilder, config) {
-                return init(contextmenu, parser, log.log, treebuilder, config);
+            function (jquery_dummy, jquery_ui_dummy, context_menu_dummy, parser, log, treebuilder, config) {
+                return init(parser, log.log, treebuilder, config);
             });
     }
-})(function(contextmenu, parser, log, treebuilder, config){ // init
+})(function(parser, log, treebuilder, config){ // init
 
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -30,7 +30,19 @@
 
     var formula_nodes = [];
     function track_formula_node(node){
+        if( node instanceof $ ) {
+            node = node[0];
+        }
         formula_nodes.push(node);
+    }
+    function untrack_formula_node(node){
+        if( node instanceof $ ) {
+            node = node[0];
+        }
+        var i = formula_nodes.indexOf(node);
+        if( i > -1 ) {
+            formula_nodes.splice(i, 1);
+        }
     }
 
     function printdom(htmlnode, depth)
@@ -71,8 +83,8 @@
     {
         function extractdata($html_node)
         {
-            console.log($html_node);
-            console.log($html_node.data());
+            // console.log($html_node);
+            // console.log($html_node.data());
 
             var type = $html_node.data('type');
             if( ['string', 'number', 'boolean', 'null', 'formula'].indexOf(type) > -1 )
@@ -107,7 +119,7 @@
         // console.log("savedata before adding config:", savedata);
         config.save(savedata);
         var savejson = JSON.stringify(savedata);
-        console.log(savejson);
+        console.log("SAVING:", savejson);
         $.ajax("savedoc",
             {
                 'type'     : 'POST',
@@ -237,11 +249,20 @@
                             case 'boolean':
                                 new_value = stringToBoolean(new_value);
                                 break;
+                            case 'formula':
+                                if( old_type !== 'formula' )
+                                {
+                                    track_formula_node($scalar);
+                                }
+                                break;
+                        }
+                        if( old_type === 'formula' && new_type !== 'formula' )
+                        {
+                            untrack_formula_node($scalar);
                         }
 
-
                         $scalar.data('raw_value', new_value);
-                        $value_display.data('type', new_type);
+                        $scalar.data('type', new_type);
 
                         var display_value = (new_type === 'formula') ? 'ERR' : new_value;
 
@@ -256,7 +277,7 @@
         });
         $type_selector.change( function changetype() {
             var new_type = $(this).val(); // "this" here is the drop-down
-            var defaults = {'null':'null', 'boolean':'false', 'number':'0', 'string':'text', 'formula':'='};
+            var defaults = {'null':'null', 'boolean':'false', 'number':'0', 'string':'text', 'formula':'=0'};
             $value_edit.val( (new_type !== old_type) ? defaults[new_type] : old_value );
         });
     }
@@ -268,7 +289,7 @@
         }
         var $label = $field.data('$label');
 
-        console.log($field.data(), $label);
+        // console.log($field.data(), $label);
 
         var $label_edit = $field.data('$label_edit');
 
@@ -283,7 +304,7 @@
                 var changed   = new_key != old_key;
                 if( !changed || validateKey(new_key) )
                 {
-                    console.log(new_key);
+                    // console.log(new_key);
                     $label_edit.hide();
                     $label.show();
 
@@ -300,13 +321,14 @@
 
     function calculateFormulas()
     {
-        var i;
+        var i, node;
         var num_changes = 0;
         var prev_num_changes;
 
         for( i = 0; i < formula_nodes.length; i++ )
         {
-            formula_nodes[i].data('display_value', 'ERR:CIRCULAR REF');
+            node  = $(formula_nodes[i]);
+            node.data('display_value', 'ERR:CIRCULAR REF');
         }
 
         do {
@@ -315,7 +337,7 @@
             for( i = 0; i < formula_nodes.length; i++ )
             {
                 try {
-                    var node = formula_nodes[i];
+                    node = $(formula_nodes[i]);
                     var formula = node.data('raw_value');
                     var context = {
                         'root':$('#document').data('document'),
@@ -351,6 +373,11 @@
             if( $$fields[i] === $node ) {
                 $$fields.splice(i, 1); // in-place
                 $parent.data('$$fields', $$fields);
+                $data_node = $node.data('$data_node');
+
+                if( $data_node.data('type') === 'formula' ) {
+                    untrack_formula_node($data_node);
+                }
                 $node.remove();
 
                 changeMade();
@@ -380,7 +407,8 @@
     {
         $('.controller').click(handleToggle);
         $('.scalar').dblclick(handleScalarEdit);
-        // $('.label').click(popUpContextMenu);
+
+        // there must be a better way than building all menus for all labels up front
         $('.label').each(function(){
             var $label = $(this);
             var $field = $label.data('$field');
