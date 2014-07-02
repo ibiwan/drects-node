@@ -1,8 +1,9 @@
 requirejs.config({
     "baseUrl" : "files",
     "paths"   : {
-        "jquery"    : "include/jquery",
-        "jquery-ui" : "include/jquery-ui",
+        "jquery"      : "include/jquery",
+        "jquery-ui"   : "include/jquery-ui",
+        "contextmenu" : "include/jquery.contextmenu"
     },
 });
 

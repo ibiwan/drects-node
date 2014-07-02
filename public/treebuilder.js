@@ -47,10 +47,10 @@
         var $field = $newdiv(type, '')
             .append($labelstack) // .data('$labelstack', $labelstack) // nobody seems to care
             .append ($data_node).data( '$data_node',  $data_node)
-            .data('selector', selector.toString())
-            .data('type', type)
+            .data(   'selector', selector.toString())
+            .data(       'type', type)
             .data('$controller', $controller)
-            .data(     '$label',      $label)
+            .data(     '$label', $label)
             .data('$label_edit', $label_edit)
             .data('$labelstack', $labelstack);
 

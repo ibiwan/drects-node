@@ -1,9 +1,11 @@
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
         // node
+        require('./include/jquery');
+        require('./include/jquery-ui');
+        require('./include/jquery.contextmenu.js');
+
         module.exports = init(
-            require('./include/jquery'),
-            require('./include/jquery-ui'),
             require('./parser'),
             require('./log').log,
             require('./treebuilder'),
@@ -12,12 +14,12 @@
     } else if ( typeof define === 'function' && define.amd ) {
         // "amd" (require.js)
         define(
-            ['jquery', 'jquery-ui', './parser', './log', './treebuilder', './config'],
-            function ($, jqueryui, parser, log, treebuilder, config) {
-                return init($, jqueryui, parser, log.log, treebuilder, config);
+            ['jquery', 'jquery-ui', 'contextmenu', './parser', './log', './treebuilder', './config'],
+            function (a, b, contextmenu, parser, log, treebuilder, config) {
+                return init(contextmenu, parser, log.log, treebuilder, config);
             });
     }
-})(function($, jqueryui, parser, log, treebuilder, config){ // init
+})(function(contextmenu, parser, log, treebuilder, config){ // init
 
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -358,36 +360,12 @@
         return false;
     }
 
-    function buildContextMenu($node, coords)
-    {
-        console.log($node, coords.left, coords.top);
-
-        var $menu = $('#contextmenu')
-            .addClass('contextmenu')
-            .css(coords)
-            .css({
-                position   : 'absolute',
-                'background-color' : '#fff',
-            })
-            .empty();
-            // .show();
-
-        var menuitems = [
-            {id:"delete",     text:"Delete Node", function: function(){handleDelete( $node);}},
-            {id:"edit-label", text: "Edit Label", function: function(){handleKeyEdit($node);}},
+    function menuItemsForNode($node) {
+        return [
+            {"Delete Node" : function(){handleDelete( $node);}},
+            $.contextMenu.separator,
+            {"Edit Label"  : function(){handleKeyEdit($node);}},
         ];
-
-        for(var i = 0; i < menuitems.length; i++)
-        {
-            var item = menuitems[i];
-            var $item = $('<div id="' + item.id + '" class="menuitem">' + item.text + '</div>');
-            $item.click(item.function);
-            $menu.append($item);
-        }
-
-        $menu.show();
-
-        // return $menu;
     }
 
     function popUpContextMenu(eventObject)
@@ -395,25 +373,19 @@
         var $label = $(this);
         var $field = $label.data('$field');
 
-        eventObject.preventDefault();
-
-        buildContextMenu($field, $label.offset());
-    }
-
-    function popDownContextMenu(eventObject)
-    {
-        if(!eventObject.isDefaultPrevented())
-        {
-            $('#contextmenu').offset({top:0,left:0}).hide();
-        }
+        $field.contextMenu(menuItemsForNode($field), {theme:'osx'});
     }
 
     function registerHandlers()
     {
         $('.controller').click(handleToggle);
         $('.scalar').dblclick(handleScalarEdit);
-        $('.label').click(popUpContextMenu);
-        $(document).click(popDownContextMenu);
+        // $('.label').click(popUpContextMenu);
+        $('.label').each(function(){
+            var $label = $(this);
+            var $field = $label.data('$field');
+            $label.contextMenu(menuItemsForNode($field), {theme:'osx'});
+        });
     }
 
     function changeMade()
