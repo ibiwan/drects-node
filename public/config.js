@@ -18,14 +18,20 @@
 })(function($, jqueryui, parser, log){ // init
 
     var _config = {};
+    var configroot = 'rex-config';
     var configlabels = ['rex-ordering', 'rex-primaries'];
-    var loadconfig = function loadconfig(tree)
+    var load = function loadconfig(tree)
     {
         for(var i = 0; i < configlabels.length; i++)
         {
             _config[configlabels[i]] = [];
         }
-        loadconfiginner(tree);
+        if( tree[configroot] )
+        {
+            loadconfiginner(tree[configroot]);
+        } else {
+            loadconfiginner(tree);
+        }
     };
     var loadconfiginner = function loadconfiginner(tree)
         {
@@ -53,21 +59,25 @@
                 }
             }
         };
-    var saveconfig = function saveconfig(tree)
-        {
-            for( var i = 0; i < configlabels.length; i++ )
-            {
-                var label = configlabels[i];
-                tree[label] = _config[label];
-            }
-        };
+    var save = function saveconfig()
+    {
+        return _config;
+        // var config = {};
+        // for( var i = 0; i < configlabels.length; i++ )
+        // {
+        //     var label = configlabels[i];
+        //     config[label] = _config[label];
+        // }
+        // return config;
+    };
     var forkey = function forkey(key)
     {
         return _config[key];
     };
     return { // interface
-        'load'   : loadconfig,
-        'save'   : saveconfig,
-        'forkey' : forkey
+        'load'       : load,
+        'save'       : save,
+        'forkey'     : forkey,
+        'configroot' : configroot,
     };
 });

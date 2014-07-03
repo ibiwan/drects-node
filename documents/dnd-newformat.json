@@ -2,19 +2,6 @@
   "rex-document": {
     "characters": [
       {
-        "name": "exultation",
-        "levels": [
-          {
-            "class": "fighter",
-            "level": 132
-          },
-          {
-            "class": "dervish",
-            "level": 11,
-            "advancing": true,
-            "prestige": true
-          }
-        ],
         "abilities": [
           {
             "ability": "Str",
@@ -47,6 +34,19 @@
             "mod": "=floor(div(add(../total, -10), 2))"
           }
         ],
+        "levels": [
+          {
+            "class": "fighter",
+            "level": 132
+          },
+          {
+            "advancing": true,
+            "class": "dervish",
+            "level": 1,
+            "prestige": true
+          }
+        ],
+        "name": "exultation",
         "vitals": {
           "age": "25 years",
           "height": "6 ' 3\"",
@@ -54,17 +54,6 @@
         }
       },
       {
-        "name": "kahlan",
-        "levels": [
-          {
-            "class": "rogue",
-            "level": 12
-          },
-          {
-            "class": "assassin",
-            "level": 2.7
-          }
-        ],
         "abilities": [
           {
             "ability": "Str",
@@ -91,6 +80,17 @@
             "total": 15
           }
         ],
+        "levels": [
+          {
+            "class": "rogue",
+            "level": 12
+          },
+          {
+            "class": "assassin",
+            "level": 2.7
+          }
+        ],
+        "name": "kahlan",
         "totallevels": "=sum(../levels/*/level)",
         "vitals": {
           "age": "22 years",
@@ -114,9 +114,9 @@
       "prestige"
     ],
     "rex-primaries": {
-      "abilities": "ability",
-      "characters": "name",
-      "levels": "class"
+      "abilities"  : "ability",
+      "characters" : "name",
+      "levels"     : "class"
     }
   }
 }

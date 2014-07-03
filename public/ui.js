@@ -21,6 +21,9 @@
     }
 })(function(parser, log, treebuilder, config){ // init
 
+    var docroot = 'rex-document';
+    var configroot = config.configroot;
+
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
         'element-close' : 'fa fa-chevron-up',
@@ -110,16 +113,20 @@
                         o[key] = data_node;
                     }
                 }
-                // console.log("a:", a, "o:", o);
                 return type === 'array' ? a : o;
             }
         }
 
-        var savedata = extractdata($('#document').data('document'));
-        // console.log("savedata before adding config:", savedata);
-        config.save(savedata);
-        var savejson = JSON.stringify(savedata);
+        var doc = extractdata($('#document').data('document'));
+        var cfg = config.save();
+
+        var file = {};
+        file[docroot]    = doc;
+        file[configroot] = cfg;
+
+        var savejson = JSON.stringify(file);
         console.log("SAVING:", savejson);
+
         $.ajax("savedoc",
             {
                 'type'     : 'POST',
@@ -154,25 +161,32 @@
 
         if( direction === 'open' )
         {
-            if( $summary ) $summary.hide();
             $data_node.show().data('state','shown');
 
+            if( $summary )
+            {
+                $summary.hide();
+            }
             if( type === 'element' )
+            {
                 $labelstack.removeClass('horizontal').addClass('vertical');
+            }
 
-            setTimeout(function(){
-                $data_node.removeClass('hidden');
-            }, 10);
+            $data_node.removeClass('hidden');
        } else {
             $data_node.addClass('hidden');
 
             setTimeout(function(){
                 $data_node.hide().data('state','hidden');
-                if( $summary ) $summary.show();
-                $field.hide().show();
 
+                if( $summary )
+                {
+                    $summary.show();
+                }
                 if( type === 'element' )
+                {
                     $labelstack.removeClass('vertical').addClass('horizontal');
+                }
             }, 500);
         }
     }
@@ -392,6 +406,7 @@
             {"Delete Node" : function(){handleDelete( $node);}},
             $.contextMenu.separator,
             {"Edit Label"  : function(){handleKeyEdit($node);}},
+            // items to find current node's absolute/relative path
         ];
     }
 
@@ -428,6 +443,11 @@
         $.ajax("getdoc")
             .done(function gotjson(file_data, stringStatus, jqXHR){
                 config.load(file_data);
+
+                if( file_data[docroot] )
+                {
+                    file_data = file_data[docroot];
+                }
 
                 var doc = treebuilder.build(file_data, config, collapsers, track_formula_node);
 
