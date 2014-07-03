@@ -1,6 +1,13 @@
 {
-  "ok":"ok",
-  "self":"=/self",
-  "circ_a":"=/circ_b",
-  "circ_b":"=/circ_a"
+  "rex-document": {
+    "ok": "okay",
+    "also_ok": "=/ok",
+    "self": "=/self",
+    "circ_a": "=/circ_b",
+    "circ_b": "=/circ_a"
+  },
+  "rex-config": {
+    "rex-ordering": [],
+    "rex-primaries": []
+  }
 }

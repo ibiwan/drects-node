@@ -59,16 +59,9 @@
                 }
             }
         };
-    var save = function saveconfig()
+    var getconfig = function getconfig()
     {
-        return _config;
-        // var config = {};
-        // for( var i = 0; i < configlabels.length; i++ )
-        // {
-        //     var label = configlabels[i];
-        //     config[label] = _config[label];
-        // }
-        // return config;
+        return $.extend(true, {}, _config);
     };
     var forkey = function forkey(key)
     {
@@ -76,7 +69,7 @@
     };
     return { // interface
         'load'       : load,
-        'save'       : save,
+        'get'        : getconfig,
         'forkey'     : forkey,
         'configroot' : configroot,
     };

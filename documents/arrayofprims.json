@@ -1,5 +1,11 @@
-[
-  "1",
-  "2",
-  "3"
-]
+{
+  "rex-document": [
+    "1",
+    "2",
+    "3"
+  ],
+  "rex-config": {
+    "rex-ordering": [],
+    "rex-primaries": []
+  }
+}

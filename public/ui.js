@@ -117,12 +117,9 @@
             }
         }
 
-        var doc = extractdata($('#document').data('document'));
-        var cfg = config.save();
-
         var file = {};
-        file[docroot]    = doc;
-        file[configroot] = cfg;
+        file[docroot]    = extractdata($('#document').data('document'));
+        file[configroot] = config.get();
 
         var savejson = JSON.stringify(file);
         console.log("SAVING:", savejson);

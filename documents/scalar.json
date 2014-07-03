@@ -1,1 +1,7 @@
-"apple (won't currently load/save correctly)"
+{
+  "rex-document": "apple",
+  "rex-config": {
+    "rex-ordering": [],
+    "rex-primaries": []
+  }
+}

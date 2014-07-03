@@ -1,17 +1,23 @@
-[
+{
+  "rex-document": [
     [
       "1",
       "2",
       "3"
     ],
     [
-      "won't currently",
-      "load / save",
-      "correctly"
+      "A",
+      "B",
+      "C"
     ],
     [
       "true",
       "false",
       "true"
     ]
-]
+  ],
+  "rex-config": {
+    "rex-ordering": [],
+    "rex-primaries": []
+  }
+}
