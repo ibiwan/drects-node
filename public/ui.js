@@ -23,6 +23,7 @@
 
     var docroot = 'rex-document';
     var configroot = config.configroot;
+    var docname = 'Untitled Document';
 
     var collapsers = {
         'element-open'  : 'fa fa-chevron-right',
@@ -128,7 +129,7 @@
             {
                 'type'     : 'POST',
                 'dataType' : 'json',
-                'data'     : {'file':savejson}
+                'data'     : {'file':savejson, 'filename':docname}
             })
             .done(function savedjson(returned_data, stringStatus, jqXHR){
                 $('#message').text("saved, I think!");
@@ -438,9 +439,20 @@
         $("body").disableSelection();
 
         $.ajax("getdoc")
-            .done(function gotjson(file_data, stringStatus, jqXHR){
-                config.load(file_data);
+            .done(function gotjson(xhr_data, stringStatus, jqXHR){
 
+                if( !xhr_data.success ) {
+                    $('#message').text("server couldn't retrieve file!");
+                    console.log("server couldn't retrieve file");
+                    return;
+                }
+
+                docname = xhr_data.filename;
+                document.title = "Dynamic Spreadsheet - " + docname;
+
+                var file_data = JSON.parse(xhr_data.file);
+
+                config.load(file_data);
                 if( file_data[docroot] )
                 {
                     file_data = file_data[docroot];

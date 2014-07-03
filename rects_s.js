@@ -44,7 +44,19 @@ function init()
 function setupDB()
 {
     var db = new sqlite3.Database('rects.db');
-    db.run("CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username TEXT, passhash TEXT, full_name TEXT)");
+    db.run("PRAGMA foreign_keys = ON");
+    db.run("CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username TEXT, passhash TEXT, full_name TEXT, archived BOOL DEFAULT false)");
+    db.run("CREATE TABLE IF NOT EXISTS version ( " +
+            "id INTEGER PRIMARY KEY, datetime TEXT, content TEXT, parent INTEGER, " +
+            "FOREIGN KEY(parent) REFERENCES version(id) " +
+    ")");
+    db.run("CREATE TABLE IF NOT EXISTS document ( " +
+            "id INTEGER PRIMARY KEY, owner INTEGER NOT NULL, filename TEXT NOT NULL, latest INTEGER NOT NULL, archived INTEGER DEFAULT 0, " +
+            "FOREIGN KEY(owner) REFERENCES user(id), " +
+            "FOREIGN KEY(latest) REFERENCES version(id) " +
+    ")");
+    // db.run("delete from document");
+    // db.run("delete from version");
     return db;
 }
 
@@ -60,6 +72,18 @@ function setupSessionSecret()
         }
     });
     return secret;
+}
+
+function dumpDB(db) {
+    db.each("SELECT * FROM user", function(err, row){
+        console.log("user:", row);
+    });
+    db.each("SELECT * FROM version", function(err, row){
+        console.log("version:", row);
+    });
+    db.each("SELECT * FROM document", function(err, row){
+        console.log("document:", row);
+    });
 }
 
 function setupServer(secret, db)
@@ -187,32 +211,114 @@ function setupServer(secret, db)
             {
                 // JSON responder; serve requested file or default file
                 console.log("getdoc()");
+                filename = req.session.filename;
 
-                if( req.session.filename )
+                if( filename )
                 {
-                    console.log("requested file: ", req.session.filename);
+                    console.log("requested file: ", filename);
                 } else {
                     console.log("using default file:");
-                    req.session.filename = 'dnd.json';
+                    req.session.filename = filename = 'dnd.json';
                 }
-                res.sendfile(__dirname + "/documents/" + req.session.filename, function(err){if(err)console.log(err);});
+                var filepath = 'documents/' + filename;
+
+                fs.readFile(filepath, function(err, data){
+                    if(err) {
+                        res.send({success:false});
+                        console.log("couldn't load:", filepath, "err:", err, "data:", data);
+                    } else {
+                        res.send({
+                            success  : true,
+                            filename : filename,
+                            file     : data.toString()
+                        });
+                    }
+                });
             },
         'savedoc' : function savedoc(req, res)
             {
                 console.log("savedoc()");
 
+                filename = req.body.filename;
+                console.log(filename);
+
                 var filedata = JSON.stringify(JSON.parse(req.body.file), null, '  ');
 
-                var filename = __dirname + "/documents/saved.json";
-                fs.writeFile(filename, filedata, {}, function(err){
+                var filepath = __dirname + "/documents/saved.json";
+                fs.writeFile(filepath, filedata, {}, function(err){
                     if( err )
                     {
-                        console.log("error saving:", err);
-                        res.json(500, {'success':false,'error':err});
-                    } else {
-                        res.json(200, {'success':true});
+                        console.log("error saving to file:", err);
                     }
                 });
+
+                db.get(
+                    'SELECT * FROM document WHERE owner = ? AND filename = ?',
+                    [req.session.userid, req.body.filename],
+                    function(e, row){
+                        if( e )
+                        {
+                            console.log("error while checking for document");
+                            res.json(500, {'success':false,'error':e});
+                            return;
+                        }
+                        if( row === undefined )
+                        {
+                            console.log("new document");
+
+                            db.run(
+                                'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
+                                [Date.now(), filedata, null],
+                                function(e){
+                                    if(e) {
+                                        console.log("err:", e);
+                                        res.json(500, {'success':false,'error':e});
+                                        return;
+                                    }
+                                    var versionid = this.lastID;
+                                    db.run(
+                                        'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
+                                        [req.session.userid, req.body.filename, versionid],
+                                        function(e){
+                                            if(e) {
+                                                console.log("err:", e);
+                                                res.json(500, {'success':false,'error':e});
+                                                return;
+                                            }
+                                            // dumpDB(db);
+                                            res.json(200, {'success':true});
+                                        });
+                                });
+                        } else {
+                            console.log("updating document");
+                            var documentid    = row.id;
+                            var latestversion = row.latest;
+
+                            db.run(
+                                'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
+                                [Date.now(), filedata, latestversion],
+                                function(e){
+                                    if(e) {
+                                        console.log("err:", e);
+                                        res.json(500, {'success':false,'error':e});
+                                        return;
+                                    }
+                                    var versionid = this.lastID;
+                                    db.run(
+                                        'UPDATE document SET latest = ? WHERE id = ?',
+                                        [versionid, documentid],
+                                        function(e){
+                                            if(e) {
+                                                console.log("err:", e);
+                                                res.json(500, {'success':false,'error':e});
+                                                return;
+                                            }
+                                            // dumpDB(db);
+                                            res.json(200, {'success':true});
+                                        });
+                                });
+                        }
+                    });
             },
         'favicon' : function favicon(req, res) { res.send(404, 'No favicon'); },
     };
