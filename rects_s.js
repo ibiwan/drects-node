@@ -25,15 +25,14 @@ var handlebars = require('handlebars');
 
 var db         = require('./private/db');
 
-console.log("1:", db);
-
 function makesecret()    //pseudorandom!
 {
     var text = "";
     var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    for( var i=0; i < 20; i++ )
+    for( var i=0; i < 20; i++ ) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
 
     return text;
 }
@@ -80,14 +79,12 @@ function setupServer(secret)
             {
                 console.log("landing()");
 
-                if( !req.session.userid )
-                {
+                if( !req.session.userid ) {
                     // if not logged in, present form
                     return renderLogin(req, res, '');
                 }
 
-                if( req.session.filename )
-                {
+                if( req.session.filename ) {
                     // if logged in, with file set, redirect to viewer
                     return res.redirect('/viewer');
                 } else {
@@ -109,31 +106,26 @@ function setupServer(secret)
                 var pass = req.body.password;
                 console.log("login attempted:", user, pass);
 
-                console.log("2:", db);
-                console.log("3:", db.THEDATABASE);
+                db.checkUserExistence(user, {
+                    found    : function(row){
+                        password(pass).verifyAgainst(row.passhash, function(error, verified) {
+                            if(error) { throw new Error(error); }
 
-                db.THEDATABASE.get("SELECT * FROM user WHERE username = ?", [user], function(err, row){
-                    if(!row)
-                    {
-                        // if username fail, present retry form
+                            if(!verified) {
+                                // if password fail, present retry form
+                                console.log("bad password for user:", user);
+                                return renderLogin(req, res, 'Unknown user or bad password; please try again.');
+                            }
+                            // if success, log in and redirect to landing
+                            console.log("user logged in:", user);
+                            req.session.userid = row.id;
+                            return res.redirect('/');
+                        });
+                    },
+                    notfound : function(   ){
                         console.log("unknown user:", user);
                         return renderLogin(req, res, 'Unknown user or bad password; please try again.');
-                    }
-
-                    // user exists; check password
-                    password(pass).verifyAgainst(row.passhash, function(error, verified) {
-                        if(error) { throw new Error(error); }
-
-                        if(!verified) {
-                            // if password fail, present retry form
-                            console.log("bad password for user:", user);
-                            return renderLogin(req, res, 'Unknown user or bad password; please try again.');
-                        }
-                        // if success, log in and redirect to landing
-                        console.log("user logged in:", user);
-                        req.session.userid = row.id;
-                        return res.redirect('/');
-                    });
+                    },
                 });
             },
         'logout'   : function logout(req, res)
@@ -146,8 +138,6 @@ function setupServer(secret)
             },
         'files'    : function files(req, res)
             {
-                // does not require session
-
                 // serve up handy dandy js and css files
                 console.log("files("+req.params[0]+")");
                 res.sendfile(__dirname + '/public/' + req.params[0], function(err){if(err)console.log(err);});
@@ -171,8 +161,7 @@ function setupServer(secret)
                 console.log("viewer()");
 
                 // if no file selected via params OR session, redirect to listdocs, else serve viewer
-                if( req.params.filename )
-                {
+                if( req.params.filename ) {
                     req.session.filename = req.params.filename;
                     return res.redirect('/viewer');
                 } else if( !req.session.filename ) {
@@ -187,8 +176,7 @@ function setupServer(secret)
                 console.log("getdoc()");
                 filename = req.session.filename;
 
-                if( filename )
-                {
+                if( filename ) {
                     console.log("requested file: ", filename);
                 } else {
                     console.log("using default file:");
@@ -220,39 +208,34 @@ function setupServer(secret)
 
                 var filepath = __dirname + "/documents/saved.json";
                 fs.writeFile(filepath, filedata, {}, function(err){
-                    if( err )
-                    {
+                    if( err ) {
                         console.log("error saving to file:", err);
                     }
                 });
 
-                db.checkDocumentExistence(req.session.userid, req.body.filename, {
-                    found    : function(row){
-                        console.log("updating document");
-                        var documentid      = row.id;
-                        var previousversion = row.latest;
+                var owner_id = req.session.userid;
 
-                        db.createVersion(filedata, previousversion, function(err){
-                            if( err )
-                            {
+                db.checkDocumentExistence(owner_id, filename, {
+                    found    : function(document){
+                        console.log("updating document");
+
+                        db.createVersion(filedata, document.latest, function(err){
+                            if( err ) {
                                 console.log("err:", err);
                                 res.json(500, {'success':false,'error':err});
                                 return;
                             }
                             var versionid = this.lastID;
-                            console.log("lastID:", versionid);
-                            db.THEDATABASE.run(
-                                'UPDATE document SET latest = ? WHERE id = ?',
-                                [versionid, documentid],
-                                function(e){
-                                    if(e) {
-                                        console.log("err:", e);
-                                        res.json(500, {'success':false,'error':e});
-                                        return;
-                                    }
-                                    db.dump();
-                                    res.json(200, {'success':true});
-                                });
+
+                            db.updateDocument(document.id, filename, versionid, function(err){
+                                if(err) {
+                                    console.log("err:", err);
+                                    res.json(500, {'success':false,'error':err});
+                                    return;
+                                }
+                                // db.dump();
+                                res.json(200, {'success':true});
+                            });
                         });
                     },
                     notfound : function(   ){
@@ -265,21 +248,19 @@ function setupServer(secret)
                                 return;
                             }
                             var versionid = this.lastID;
-                            db.THEDATABASE.run(
-                                'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
-                                [req.session.userid, req.body.filename, versionid],
-                                function(e){
-                                    if(e) {
-                                        console.log("err:", e);
-                                        res.json(500, {'success':false,'error':e});
-                                        return;
-                                    }
-                                    db.dump();
-                                    res.json(200, {'success':true});
-                                });
+
+                            db.createDocument(owner_id, filename, versionid, function(err){
+                                if(err) {
+                                    console.log("err:", err);
+                                    res.json(500, {'success':false,'error':err});
+                                    return;
+                                }
+                                // db.dump();
+                                res.json(200, {'success':true});
+                            });
                         });
                     },
-                    error    : function(err){
+                    error    : function(err) {
                         console.log("error while checking for document");
                         res.json(500, {'success':false,'error':e});
                         return;

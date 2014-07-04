@@ -12,13 +12,13 @@
                     "username  TEXT, " +
                     "passhash  TEXT, " +
                     "full_name TEXT, " +
-                    "archived INTEGER DEFAULT 0" +
+                    "archived  INTEGER DEFAULT 0" +
         ")");
         _db.run("CREATE TABLE IF NOT EXISTS version ( " +
                     "id       INTEGER PRIMARY KEY, " +
                     "datetime TEXT, " +
                     "content  TEXT, " +
-                    "parent    INTEGER, " +
+                    "parent   INTEGER, " +
                 "FOREIGN KEY(parent) REFERENCES version(id) " +
         ")");
         _db.run("CREATE TABLE IF NOT EXISTS document ( " +
@@ -88,9 +88,9 @@
 
     function checkDocumentExistence(userid, filename, callbacks)
     {
-        if(   callbacks.found === undefined) {    callbacks.found = function(row){console.log("file found!");}; }
+        if(callbacks.found    === undefined) { callbacks.found    = function(row){console.log("file found!");};     }
         if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("file not found!");}; }
-        if(   callbacks.error === undefined) {    callbacks.error = function(err){console.log("error!", err);}; }
+        if(callbacks.error    === undefined) { callbacks.error    = function(err){console.log("error!", err);};     }
 
         _db.get('SELECT * FROM document WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
             [userid, filename],
@@ -103,6 +103,26 @@
                     callbacks.notfound();
                 }
             });
+    }
+
+    function createDocument(owner, filename, latest, result_cb)
+    {
+        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
+
+        _db.run(
+            'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
+            [owner, filename, latest],
+            result_cb);
+    }
+
+    function updateDocument(document_id, filename, latest, result_cb)
+    {
+        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
+
+        _db.run(
+            'UPDATE document SET filename=?, latest=? WHERE id = ?',
+            [filename, latest, document_id],
+            result_cb);
     }
 
     function createVersion(content, parent_id, result_cb)
@@ -123,6 +143,8 @@
         createUser             : createUser,
         updateUser             : updateUser,
         checkDocumentExistence : checkDocumentExistence,
+        createDocument         : createDocument,
+        updateDocument         : updateDocument,
         createVersion          : createVersion,
         THEDATABASE:_db,
     };

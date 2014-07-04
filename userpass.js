@@ -32,7 +32,7 @@ password(pass).hash(function(error, hash) {
     db.checkUserExistence(user, {
         found    : function(row){
             console.log("UPDATING USER");
-            db.updateUser(row.id, hash, name, function(err){
+            db.updateUser(row.id, hash, row.full_name, function(err){
                 if( err ) {
                     console.log("error:", err);
                 } else {
