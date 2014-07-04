@@ -23,6 +23,10 @@ var sqlite3    = require('sqlite3').verbose();
 var password   = require('password-hash-and-salt');
 var handlebars = require('handlebars');
 
+var db         = require('./private/db');
+
+console.log("1:", db);
+
 function makesecret()    //pseudorandom!
 {
     var text = "";
@@ -36,28 +40,8 @@ function makesecret()    //pseudorandom!
 
 function init()
 {
-    var db = setupDB();
     var secret = setupSessionSecret();
-    setupServer(secret, db);
-}
-
-function setupDB()
-{
-    var db = new sqlite3.Database('rects.db');
-    db.run("PRAGMA foreign_keys = ON");
-    db.run("CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username TEXT, passhash TEXT, full_name TEXT, archived BOOL DEFAULT false)");
-    db.run("CREATE TABLE IF NOT EXISTS version ( " +
-            "id INTEGER PRIMARY KEY, datetime TEXT, content TEXT, parent INTEGER, " +
-            "FOREIGN KEY(parent) REFERENCES version(id) " +
-    ")");
-    db.run("CREATE TABLE IF NOT EXISTS document ( " +
-            "id INTEGER PRIMARY KEY, owner INTEGER NOT NULL, filename TEXT NOT NULL, latest INTEGER NOT NULL, archived INTEGER DEFAULT 0, " +
-            "FOREIGN KEY(owner) REFERENCES user(id), " +
-            "FOREIGN KEY(latest) REFERENCES version(id) " +
-    ")");
-    // db.run("delete from document");
-    // db.run("delete from version");
-    return db;
+    setupServer(secret);
 }
 
 function setupSessionSecret()
@@ -74,19 +58,7 @@ function setupSessionSecret()
     return secret;
 }
 
-function dumpDB(db) {
-    db.each("SELECT * FROM user", function(err, row){
-        console.log("user:", row);
-    });
-    db.each("SELECT * FROM version", function(err, row){
-        console.log("version:", row);
-    });
-    db.each("SELECT * FROM document", function(err, row){
-        console.log("document:", row);
-    });
-}
-
-function setupServer(secret, db)
+function setupServer(secret)
 {
     function denyAnon(req, res, next)
     {
@@ -137,7 +109,10 @@ function setupServer(secret, db)
                 var pass = req.body.password;
                 console.log("login attempted:", user, pass);
 
-                db.get("SELECT * FROM user WHERE username = ?", [user], function(err, row){
+                console.log("2:", db);
+                console.log("3:", db.THEDATABASE);
+
+                db.THEDATABASE.get("SELECT * FROM user WHERE username = ?", [user], function(err, row){
                     if(!row)
                     {
                         // if username fail, present retry form
@@ -169,7 +144,6 @@ function setupServer(secret, db)
                 req.session.destroy();
                 return res.redirect('/');
             },
-
         'files'    : function files(req, res)
             {
                 // does not require session
@@ -252,73 +226,65 @@ function setupServer(secret, db)
                     }
                 });
 
-                db.get(
-                    'SELECT * FROM document WHERE owner = ? AND filename = ?',
-                    [req.session.userid, req.body.filename],
-                    function(e, row){
-                        if( e )
-                        {
-                            console.log("error while checking for document");
-                            res.json(500, {'success':false,'error':e});
-                            return;
-                        }
-                        if( row === undefined )
-                        {
-                            console.log("new document");
+                db.checkDocumentExistence(req.session.userid, req.body.filename, {
+                    found    : function(row){
+                        console.log("updating document");
+                        var documentid      = row.id;
+                        var previousversion = row.latest;
 
-                            db.run(
-                                'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
-                                [Date.now(), filedata, null],
+                        db.createVersion(filedata, previousversion, function(err){
+                            if( err )
+                            {
+                                console.log("err:", err);
+                                res.json(500, {'success':false,'error':err});
+                                return;
+                            }
+                            var versionid = this.lastID;
+                            console.log("lastID:", versionid);
+                            db.THEDATABASE.run(
+                                'UPDATE document SET latest = ? WHERE id = ?',
+                                [versionid, documentid],
                                 function(e){
                                     if(e) {
                                         console.log("err:", e);
                                         res.json(500, {'success':false,'error':e});
                                         return;
                                     }
-                                    var versionid = this.lastID;
-                                    db.run(
-                                        'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
-                                        [req.session.userid, req.body.filename, versionid],
-                                        function(e){
-                                            if(e) {
-                                                console.log("err:", e);
-                                                res.json(500, {'success':false,'error':e});
-                                                return;
-                                            }
-                                            // dumpDB(db);
-                                            res.json(200, {'success':true});
-                                        });
+                                    db.dump();
+                                    res.json(200, {'success':true});
                                 });
-                        } else {
-                            console.log("updating document");
-                            var documentid    = row.id;
-                            var latestversion = row.latest;
+                        });
+                    },
+                    notfound : function(   ){
+                        console.log("new document");
 
-                            db.run(
-                                'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
-                                [Date.now(), filedata, latestversion],
+                        db.createVersion(filedata, null, function(err){
+                            if(err) {
+                                console.log("err:", err);
+                                res.json(500, {'success':false,'error':err});
+                                return;
+                            }
+                            var versionid = this.lastID;
+                            db.THEDATABASE.run(
+                                'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
+                                [req.session.userid, req.body.filename, versionid],
                                 function(e){
                                     if(e) {
                                         console.log("err:", e);
                                         res.json(500, {'success':false,'error':e});
                                         return;
                                     }
-                                    var versionid = this.lastID;
-                                    db.run(
-                                        'UPDATE document SET latest = ? WHERE id = ?',
-                                        [versionid, documentid],
-                                        function(e){
-                                            if(e) {
-                                                console.log("err:", e);
-                                                res.json(500, {'success':false,'error':e});
-                                                return;
-                                            }
-                                            // dumpDB(db);
-                                            res.json(200, {'success':true});
-                                        });
+                                    db.dump();
+                                    res.json(200, {'success':true});
                                 });
-                        }
-                    });
+                        });
+                    },
+                    error    : function(err){
+                        console.log("error while checking for document");
+                        res.json(500, {'success':false,'error':e});
+                        return;
+                    },
+                });
             },
         'favicon' : function favicon(req, res) { res.send(404, 'No favicon'); },
     };

@@ -4,7 +4,7 @@
         module.exports = init(
             require('./lexer'),
             require('./functions').functions,
-            require('./jsonobject'), // note: use json objects from command line
+            require('../private/jsonobject'), // note: use json objects from command line
             require('./log').log
         );
     } else if ( typeof define === 'function' && define.amd ) {
