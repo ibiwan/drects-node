@@ -32,7 +32,7 @@
         ")");
         // _db.run("delete from document");
         // _db.run("delete from version");
-        _db.run("delete from user where id >= 3");
+        // _db.run("delete from user where id >= 3");
     }
 
     function dumpDB() {
@@ -47,7 +47,7 @@
         });
     }
 
-    function checkUserExistence(username, callbacks)
+    function getUserByName(username, callbacks)
     {
         if(   callbacks.found === undefined) {    callbacks.found = function(row){console.log("user found!");}; }
         if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("user not found!");}; }
@@ -86,7 +86,7 @@
             result_cb);
     }
 
-    function checkDocumentExistence(userid, filename, callbacks)
+    function getDocumentByUserAndFilename(userid, filename, callbacks)
     {
         if(callbacks.found    === undefined) { callbacks.found    = function(row){console.log("file found!");};     }
         if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("file not found!");}; }
@@ -138,15 +138,17 @@
     setupDB();
 
     module.exports = {
-        dump                   : dumpDB,
-        checkUserExistence     : checkUserExistence,
-        createUser             : createUser,
-        updateUser             : updateUser,
-        checkDocumentExistence : checkDocumentExistence,
-        createDocument         : createDocument,
-        updateDocument         : updateDocument,
-        createVersion          : createVersion,
-        THEDATABASE:_db,
+        dump                         : dumpDB,
+
+        getUserByName                : getUserByName,
+        createUser                   : createUser,
+        updateUser                   : updateUser,
+
+        getDocumentByUserAndFilename : getDocumentByUserAndFilename,
+        createDocument               : createDocument,
+        updateDocument               : updateDocument,
+
+        createVersion                : createVersion,
     };
 })();
 

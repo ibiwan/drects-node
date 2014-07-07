@@ -106,7 +106,7 @@ function setupServer(secret)
                 var pass = req.body.password;
                 console.log("login attempted:", user, pass);
 
-                db.checkUserExistence(user, {
+                db.getUserByName(user, {
                     found    : function(row){
                         password(pass).verifyAgainst(row.passhash, function(error, verified) {
                             if(error) { throw new Error(error); }
@@ -201,6 +201,11 @@ function setupServer(secret)
             {
                 console.log("savedoc()");
 
+                function ajaxerr(err) {
+                    console.log("err:", err);
+                    res.json(500, {'success':false,'error':err});
+                }
+
                 filename = req.body.filename;
                 console.log(filename);
 
@@ -215,26 +220,18 @@ function setupServer(secret)
 
                 var owner_id = req.session.userid;
 
-                db.checkDocumentExistence(owner_id, filename, {
-                    found    : function(document){
+                db.getDocumentByUserAndFilename(owner_id, filename, {
+                    found    : function(doc){
                         console.log("updating document");
 
-                        db.createVersion(filedata, document.latest, function(err){
-                            if( err ) {
-                                console.log("err:", err);
-                                res.json(500, {'success':false,'error':err});
-                                return;
-                            }
+                        db.createVersion(filedata, doc.latest, function(err){
+                            if( err ) { return ajaxerr(err); }
                             var versionid = this.lastID;
 
-                            db.updateDocument(document.id, filename, versionid, function(err){
-                                if(err) {
-                                    console.log("err:", err);
-                                    res.json(500, {'success':false,'error':err});
-                                    return;
-                                }
-                                // db.dump();
+                            db.updateDocument(doc.id, filename, versionid, function(err){
+                                if( err ) { return ajaxerr(err); }
                                 res.json(200, {'success':true});
+                                // db.dump();
                             });
                         });
                     },
@@ -242,11 +239,7 @@ function setupServer(secret)
                         console.log("new document");
 
                         db.createVersion(filedata, null, function(err){
-                            if(err) {
-                                console.log("err:", err);
-                                res.json(500, {'success':false,'error':err});
-                                return;
-                            }
+                            if( err ) { return ajaxerr(err); }
                             var versionid = this.lastID;
 
                             db.createDocument(owner_id, filename, versionid, function(err){
@@ -255,16 +248,12 @@ function setupServer(secret)
                                     res.json(500, {'success':false,'error':err});
                                     return;
                                 }
-                                // db.dump();
                                 res.json(200, {'success':true});
+                                // db.dump();
                             });
                         });
                     },
-                    error    : function(err) {
-                        console.log("error while checking for document");
-                        res.json(500, {'success':false,'error':e});
-                        return;
-                    },
+                    error    : function(err) { return ajaxerr(err); },
                 });
             },
         'favicon' : function favicon(req, res) { res.send(404, 'No favicon'); },

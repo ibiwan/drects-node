@@ -29,7 +29,7 @@ password(pass).hash(function(error, hash) {
         throw new Error(error);
     }
 
-    db.checkUserExistence(user, {
+    db.getUserByName(user, {
         found    : function(row){
             console.log("UPDATING USER");
             db.updateUser(row.id, hash, row.full_name, function(err){
