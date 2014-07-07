@@ -84,7 +84,7 @@ Certain objects can be added to the root level of the document, to customize the
 - Clone git repo of project: 
     `https://github.com/ibiwan/drects-node.git`
 - In project directory, use npm to install dependencies:
-    `npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt csurf handlebars`
+    `npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt csurf handlebars express-session minimis`
 - See "Usage" section above for further directions
 
 ### Direction

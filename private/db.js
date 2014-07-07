@@ -3,9 +3,16 @@
     var sqlite3    = require('sqlite3').verbose();
     var _db;
 
+    function logErr(err) {
+        if(err) {
+            console.log("DB error!", err);
+        }
+    }
+
     function setupDB()
     {
         _db = new sqlite3.Database('rects.db');
+
         _db.run("PRAGMA foreign_keys = ON");
         _db.run("CREATE TABLE IF NOT EXISTS user ( " +
                     "id        INTEGER PRIMARY KEY, " +
@@ -32,7 +39,7 @@
         ")");
         // _db.run("delete from document");
         // _db.run("delete from version");
-        // _db.run("delete from user where id >= 3");
+        _db.run("delete from user where id >= 3");
     }
 
     function dumpDB() {
@@ -51,11 +58,11 @@
     {
         if(   callbacks.found === undefined) {    callbacks.found = function(row){console.log("user found!");}; }
         if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("user not found!");}; }
-        if(   callbacks.error === undefined) {    callbacks.error = function(err){console.log("error!", err);}; }
+        if(   callbacks.error === undefined) {    callbacks.error = logErr; }
 
         _db.get('SELECT * FROM user WHERE username = ?', username, function(err, row){
             if(err) {
-                callbacks.error();
+                callbacks.error(err);
             } else if (row) {
                 callbacks.found(row);
             } else {
@@ -67,7 +74,7 @@
     function createUser(username, passhash, full_name, result_cb)
     {
         if( full_name === undefined ) { full_name = ''; }
-        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
+        if( result_cb === undefined ) { result_cb = logErr }
 
         _db.run(
             "INSERT INTO user (username, passhash, full_name) VALUES (?, ?, ?)",
@@ -90,13 +97,13 @@
     {
         if(callbacks.found    === undefined) { callbacks.found    = function(row){console.log("file found!");};     }
         if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("file not found!");}; }
-        if(callbacks.error    === undefined) { callbacks.error    = function(err){console.log("error!", err);};     }
+        if(callbacks.error    === undefined) { callbacks.error    = logErr }
 
         _db.get('SELECT * FROM document WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
             [userid, filename],
             function(err, row){
                 if(err) {
-                    callbacks.error();
+                    callbacks.error(err);
                 } else if (row) {
                     callbacks.found(row);
                 } else {
@@ -105,9 +112,32 @@
             });
     }
 
+    function listUserDocuments(userid, callbacks) 
+    {
+        if( callbacks.success === undefined ) { callbacks.success = function(rows){
+            for(var i in rows) {
+                var row = rows[i];
+                console.log("row, id:", (row.id) ? (row.id) : '')}; 
+            }
+        }
+        if( callbacks.error   === undefined ) { callbacks.error   = logErr; }
+
+        var blah = _db.all('SELECT * FROM document WHERE owner = ?',
+            [userid],
+            function(err, rows){
+                if(err) {
+                    callbacks.error(err);
+                } else {
+                    callbacks.success(rows);
+                }
+            });
+        _db.wait(function(){console.log("yo");});
+        console.log("sync");
+    }
+
     function createDocument(owner, filename, latest, result_cb)
     {
-        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
+        if( result_cb === undefined ) { result_cb = logErr; }
 
         _db.run(
             'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
@@ -117,7 +147,7 @@
 
     function updateDocument(document_id, filename, latest, result_cb)
     {
-        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
+        if( result_cb === undefined ) { result_cb = logErr; }
 
         _db.run(
             'UPDATE document SET filename=?, latest=? WHERE id = ?',
@@ -127,7 +157,7 @@
 
     function createVersion(content, parent_id, result_cb)
     {
-        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
+        if( result_cb === undefined ) { result_cb = logErr; }
 
         _db.run(
             'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
@@ -135,20 +165,38 @@
             result_cb);
     }
 
+    function getDocumentVersion(userid, filename, callbacks)
+    {
+        if(callbacks.found    === undefined) { callbacks.found    = function(row){console.log("file found!");};     }
+        if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("file not found!");}; }
+        if(callbacks.error    === undefined) { callbacks.error    = logErr }
+
+        _db.get('SELECT * FROM document LEFT JOIN version ON document.latest = version.id WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
+            [userid, filename],
+            function(err, row){
+                if(err) {
+                    callbacks.error(err);
+                } else if (row) {
+                    callbacks.found(row);
+                } else {
+                    callbacks.notfound();
+                }
+            });
+    }
+
     setupDB();
 
     module.exports = {
-        dump                         : dumpDB,
-
-        getUserByName                : getUserByName,
-        createUser                   : createUser,
-        updateUser                   : updateUser,
-
+        dump                   : dumpDB,
+        getUserByName          : getUserByName,
+        createUser             : createUser,
+        updateUser             : updateUser,
         getDocumentByUserAndFilename : getDocumentByUserAndFilename,
-        createDocument               : createDocument,
-        updateDocument               : updateDocument,
-
-        createVersion                : createVersion,
+        listUserDocuments      : listUserDocuments,
+        createDocument         : createDocument,
+        updateDocument         : updateDocument,
+        createVersion          : createVersion,
+        getDocumentVersion : getDocumentVersion,
     };
 })();
 

@@ -11,7 +11,7 @@ var fs         = require('fs');
 var express    = require('express');
 
 // middlewarez
-var bodyParser = require('body-parser')();
+var bodyParser = require('body-parser');
 var morgan     = require('morgan')('dev');
 var cookie     = require('cookie-parser')();
 var session    = require('express-session');
@@ -24,6 +24,12 @@ var password   = require('password-hash-and-salt');
 var handlebars = require('handlebars');
 
 var db         = require('./private/db');
+
+function logErr(err) {
+    if(err) {
+        console.log(err);
+    }
+}
 
 function makesecret()    //pseudorandom!
 {
@@ -140,21 +146,40 @@ function setupServer(secret)
             {
                 // serve up handy dandy js and css files
                 console.log("files("+req.params[0]+")");
-                res.sendfile(__dirname + '/public/' + req.params[0], function(err){if(err)console.log(err);});
+                res.sendfile(__dirname + '/public/' + req.params[0], logErr);
             },
         'listdocs' : function listdocs(req, res)
             {
                 console.log("listdocs()");
 
                 // present list of available files for user.
+                var out = '';
+
+                var owner_id = req.session.userid;
+                out += 'User Files:<br /><ul>';
+                db.listUserDocuments(owner_id, {success:function(rows){
+                    for(var i in rows) {
+                        var row = rows[i];
+                        var outrow = "<li><a href='/viewer/" + row.filename + "'>" + row.filename + "</a></li>";
+                        console.log(outrow);
+                        out += outrow;
+                    }
+                    out += '</ul><br />';
+
+
+                    out += 'Template Files:<ul>';
                 fs.readdir(__dirname + '/documents', function(err, files){
-                    var out = '';
                     for(var i = 0; i < files.length; i++)
                     {
-                        out += "<a href='/viewer/" + files[i] + "'>" + files[i] + "</a><br />";
+                            var outrow = "<li><a href='/viewer/template/" + files[i] + "'>" + files[i] + "</a></li>";
+                            out += outrow;
                     }
+                        out += '</ul>';
+
+                        console.log("out:", out);
                     res.send(out);
                 });
+                }});
             },
         'viewer' : function viewer(req, res)
             {
@@ -162,26 +187,32 @@ function setupServer(secret)
 
                 // if no file selected via params OR session, redirect to listdocs, else serve viewer
                 if( req.params.filename ) {
+                    req.session.type     = ( req.params.type === 'template' ) ? 'template' : 'editable';
                     req.session.filename = req.params.filename;
+
                     return res.redirect('/viewer');
                 } else if( !req.session.filename ) {
                     return res.redirect('/listdocs');
                 }
 
-                res.sendfile(__dirname + "/templates/viewer.html", function(err){if(err)console.log(err);});
+                res.sendfile(__dirname + "/templates/viewer.html", logErr);
             },
         'getdoc' : function getdoc(req, res)
             {
                 // JSON responder; serve requested file or default file
                 console.log("getdoc()");
-                filename = req.session.filename;
+                var filename = req.session.filename;
+                var filetype = req.session.type ? req.session.type : 'template';
 
                 if( filename ) {
                     console.log("requested file: ", filename);
                 } else {
                     console.log("using default file:");
-                    req.session.filename = filename = 'dnd.json';
+                    req.session.filename = filename = 'dnd-raw.json';
                 }
+
+                if( filetype === 'template' )
+                {
                 var filepath = 'documents/' + filename;
 
                 fs.readFile(filepath, function(err, data){
@@ -196,6 +227,23 @@ function setupServer(secret)
                         });
                     }
                 });
+                } else { // load from database
+                    var owner_id = req.session.userid;
+
+                    db.getDocumentVersion(owner_id, filename, {
+                        found    : function(document){
+                            console.log("opening db doc:", document);
+                            res.send({
+                                success  : true,
+                                filename : filename,
+                                file     : document.content.toString()
+                            });
+                        },
+                        notfound : function(   )     {res.send({success:false});},
+                        error    : function(err)     {res.send({success:false});},
+                    });
+                }
+
             },
         'savedoc' : function savedoc(req, res)
             {
@@ -259,26 +307,40 @@ function setupServer(secret)
         'favicon' : function favicon(req, res) { res.send(404, 'No favicon'); },
     };
 
-    var publicRoutes = express.Router()
+    var publicRoutes = express.Router()//allow anon
+        .post('/login', 
+            bodyParser.json(), 
+            bodyParser.urlencoded({
+                extended:true,
+            }), 
+            csrf,                        handlers.login)
         .get ('/',                        handlers.landing)
-        .post('/login', bodyParser, csrf, handlers.login)
         .get ('/files/*',                 handlers.files)
         .get ('/favicon.ico',             handlers.favicon);
 
-    var privateRoutes = express.Router()
-        .use(denyAnon)
+    var privateRoutes = express.Router().use(denyAnon)
+        .post('/savedoc', 
+            bodyParser.json(), 
+            bodyParser.urlencoded({
+                extended:true,
+            }), 
+            csrf,                        handlers.savedoc)
         .get ('/logout',                    handlers.logout)
         .get ('/listdocs',                  handlers.listdocs)
         .get ('/viewer',                    handlers.viewer)
         .get ('/viewer/:filename',          handlers.viewer)
-        .get ('/getdoc',                    handlers.getdoc)
-        .post('/savedoc', bodyParser, csrf, handlers.savedoc);
+        .get ('/viewer/:type/:filename', handlers.viewer)
+        .get ('/getdoc',                 handlers.getdoc);
 
     var port = 1338;
     var app = express()
         .use(morgan) // automatic logging ftw
         .use(cookie)
-        .use(session({secret: secret}))
+        .use(session({
+            secret: secret,
+            saveUninitialized: true,
+            resave: true,
+        }))
 
         .use(publicRoutes)
         .use(privateRoutes)
