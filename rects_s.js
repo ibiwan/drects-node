@@ -161,7 +161,6 @@ function setupServer(secret)
                     for(var i in rows) {
                         var row = rows[i];
                         var outrow = "<li><a href='/viewer/" + row.filename + "'>" + row.filename + "</a></li>";
-                        console.log(outrow);
                         out += outrow;
                     }
                     out += '</ul><br />';
@@ -176,7 +175,6 @@ function setupServer(secret)
                         }
                         out += '</ul>';
 
-                        console.log("out:", out);
                         res.send(out);
                     });
                 }});
@@ -232,7 +230,6 @@ function setupServer(secret)
 
                     db.getDocumentVersion(owner_id, filename, {
                         found    : function(document){
-                            console.log("opening db doc:", document);
                             res.send({
                                 success  : true,
                                 filename : filename,

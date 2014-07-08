@@ -131,8 +131,6 @@
                     callbacks.success(rows);
                 }
             });
-        _db.wait(function(){console.log("yo");});
-        console.log("sync");
     }
 
     function createDocument(owner, filename, latest, result_cb)
