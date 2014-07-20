@@ -1,12 +1,20 @@
 (function(){
 
-    var sqlite3    = require('sqlite3').verbose();
+    var Promise = require('promise');
+    var sqlite3 = require('sqlite3').verbose();
     var _db;
 
     function logErr(err) {
         if(err) {
             console.log("DB error!", err);
         }
+    }
+
+    function destroyData()
+    {
+        // _db.run("delete from document");
+        // _db.run("delete from version");
+        // _db.run("delete from user where id >= 3");        
     }
 
     function setupDB()
@@ -37,9 +45,7 @@
                 "FOREIGN KEY(owner) REFERENCES user(id), " +
                 "FOREIGN KEY(latest) REFERENCES version(id) " +
         ")");
-        // _db.run("delete from document");
-        // _db.run("delete from version");
-        _db.run("delete from user where id >= 3");
+        destroyData();
     }
 
     function dumpDB() {
@@ -54,132 +60,101 @@
         });
     }
 
-    function checkUserExistence(username, callbacks)
-    {
-        if(   callbacks.found === undefined) {    callbacks.found = function(row){console.log("user found!");}; }
-        if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("user not found!");}; }
-        if(   callbacks.error === undefined) {    callbacks.error = logErr; }
-
-        _db.get('SELECT * FROM user WHERE username = ?', username, function(err, row){
-            if(err) {
-                callbacks.error(err);
-            } else if (row) {
-                callbacks.found(row);
-            } else {
-                callbacks.notfound();
-            }
+    function get(query, params){
+        return new Promise(function (resolve, reject){
+            _db.get(query, params, function (err, res){
+                if (err) reject(err);
+                else     resolve(res);
+            });
+        });
+    }
+    function run(query, params){
+        return new Promise(function (resolve, reject){
+            _db.run(query, params, function (err, res){
+                if (err) reject(err);
+                else     resolve(res);
+            });
+        });
+    }
+    function all(query, params){
+        return new Promise(function (resolve, reject){
+            _db.all(query, params, function (err, res){
+                if (err) reject(err);
+                else     resolve(res);
+            });
         });
     }
 
-    function createUser(username, passhash, full_name, result_cb)
+    function checkUserExistence(username)
+    {
+        return get(
+            'SELECT * FROM user WHERE username = ?', 
+            [username]);
+    }
+
+    function createUser(username, passhash, full_name)
     {
         if( full_name === undefined ) { full_name = ''; }
-        if( result_cb === undefined ) { result_cb = logErr }
-
-        _db.run(
-            "INSERT INTO user (username, passhash, full_name) VALUES (?, ?, ?)",
-            [username, passhash, full_name],
-            result_cb);
+        return run(
+            "INSERT INTO user (username, passhash, full_name) VALUES (?, ?, ?)", 
+            [username, passhash, full_name]);
     }
 
-    function updateUser(user_id, passhash, full_name, result_cb)
+    function updateUser(user_id, passhash, full_name)
     {
-        if( full_name === undefined ) { full_name = ''; }
-        if( result_cb === undefined ) { result_cb = function(err){ if(err) console.log("error!", err); }; }
-
-        _db.run(
-            "UPDATE user SET passhash=?, full_name=? WHERE id = ?",
-            [passhash, full_name, user_id],
-            result_cb);
+        return run(
+            "UPDATE user SET passhash=?, full_name=? WHERE id = ?", 
+            [passhash, full_name, user_id]);
     }
 
-    function getDocument(userid, filename, callbacks)
+    function deleteUser(user_id) 
     {
-        if(callbacks.found    === undefined) { callbacks.found    = function(row){console.log("file found!");};     }
-        if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("file not found!");}; }
-        if(callbacks.error    === undefined) { callbacks.error    = logErr }
-
-        _db.get('SELECT * FROM document WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
-            [userid, filename],
-            function(err, row){
-                if(err) {
-                    callbacks.error(err);
-                } else if (row) {
-                    callbacks.found(row);
-                } else {
-                    callbacks.notfound();
-                }
-            });
+        return run(
+            "DELETE FROM user WHERE id = ?", 
+            [user_id]);
     }
 
-    function listUserDocuments(userid, callbacks) 
+    function getDocument(userid, filename)
     {
-        if( callbacks.success === undefined ) { callbacks.success = function(rows){
-            for(var i in rows) {
-                var row = rows[i];
-                console.log("row, id:", (row.id) ? (row.id) : '')}; 
-            }
-        }
-        if( callbacks.error   === undefined ) { callbacks.error   = logErr; }
 
-        var blah = _db.all('SELECT * FROM document WHERE owner = ?',
-            [userid],
-            function(err, rows){
-                if(err) {
-                    callbacks.error(err);
-                } else {
-                    callbacks.success(rows);
-                }
-            });
+        return get(
+            'SELECT * FROM document WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
+            [userid, filename]);
     }
 
-    function createDocument(owner, filename, latest, result_cb)
+    function listUserDocuments(userid) 
     {
-        if( result_cb === undefined ) { result_cb = logErr; }
+        return all(
+            'SELECT * FROM document WHERE owner = ?',
+            [userid]);
+    }
 
-        _db.run(
+    function createDocument(owner, filename, latest)
+    {
+        return run(
             'INSERT INTO document (owner, filename, latest) VALUES (?, ?, ?)',
-            [owner, filename, latest],
-            result_cb);
+            [owner, filename, latest]);
     }
 
-    function updateDocument(document_id, filename, latest, result_cb)
+    function updateDocument(document_id, filename, latest)
     {
-        if( result_cb === undefined ) { result_cb = logErr; }
-
-        _db.run(
+        return run(
             'UPDATE document SET filename=?, latest=? WHERE id = ?',
-            [filename, latest, document_id],
-            result_cb);
+            [filename, latest, document_id]);
     }
 
-    function createVersion(content, parent_id, result_cb)
+    function createVersion(content, parent_id)
     {
-        if( result_cb === undefined ) { result_cb = logErr; }
-
-        _db.run(
+        return run(
             'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
-            [Date.now(), content, parent_id],
-            result_cb);
+            [Date.now(), content, parent_id]);
     }
 
-    function getDocumentVersion(userid, filename, callbacks)
+    function getDocumentVersion(userid, filename)
     {
-        if(callbacks.found    === undefined) { callbacks.found    = function(row){console.log("file found!");};     }
-        if(callbacks.notfound === undefined) { callbacks.notfound = function(   ){console.log("file not found!");}; }
-        if(callbacks.error    === undefined) { callbacks.error    = logErr }
-
-        _db.get('SELECT * FROM document LEFT JOIN version ON document.latest = version.id WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
-            [userid, filename],
-            function(err, row){
-                if(err) {
-                    callbacks.error(err);
-                } else if (row) {
-                    callbacks.found(row);
-                } else {
-                    callbacks.notfound();
-                }
-            });
+        return get(
+            'SELECT * FROM document LEFT JOIN version ON document.latest = version.id WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
+            [userid, filename]);
     }
 
     setupDB();
@@ -189,6 +164,7 @@
         checkUserExistence : checkUserExistence,
         createUser         : createUser,
         updateUser         : updateUser,
+        deleteUser         : deleteUser,
         getDocument        : getDocument,
         listUserDocuments  : listUserDocuments,
         createDocument     : createDocument,
