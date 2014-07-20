@@ -12,8 +12,11 @@
     },
     "somecat": "=cat(../sources/0, ../sources/1)",
     "sources": [
-      "a",
-      "b"
+      "Q",
+      "W",
+      "E",
+      "R",
+      "T"
     ],
     "plus_field": "+",
     "plus_symbol": "=/plus_field"

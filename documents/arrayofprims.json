@@ -2,7 +2,7 @@
   "rex-document": [
     "1",
     "2",
-    "3"
+    null
   ],
   "rex-config": {
     "rex-ordering": [],
