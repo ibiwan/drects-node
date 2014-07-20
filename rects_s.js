@@ -98,7 +98,7 @@ function setupServer(secret)
     function renderLogin(req, res, message)
     {
         fs.readFile(__dirname + '/templates/login.html', function(err, data){
-            if( err ) throw new Exception(err);
+            if( err ) throw err;
             var template = handlebars.compile(data.toString());
             res.send(template({'message':message}));
         });
@@ -141,7 +141,8 @@ function setupServer(secret)
                 .then(function(result){
                     if(!result){
                         console.log("unknown user:", user);
-                        return renderLogin(req, res, 'Unknown user or bad password; please try again.');
+                        renderLogin(req, res, 'Unknown user or bad password; please try again.');
+                        throw "bad user";
                     };
 
                     user_id = result.id;
@@ -150,7 +151,8 @@ function setupServer(secret)
                 .then(function(verified){
                     if(!verified) {
                         console.log("bad password for user:", user);
-                        return renderLogin(req, res, 'Unknown user or bad password; please try again.');
+                        renderLogin(req, res, 'Unknown user or bad password; please try again.');
+                        throw "bad password";
                     }
 
                     console.log("user logged in:", user);
