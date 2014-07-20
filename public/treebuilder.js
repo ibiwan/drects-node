@@ -206,10 +206,10 @@
     }
     function gentree(data, primaryvalue, summary_holder)
     {
-        // if( data === null )
-        // {
-        //     data = "null"; // what's this fix?
-        // }
+        if( data === null )
+        {
+            data = "null";
+        }
 
         var t = typeof(data);
         if( ["null", "number", "string", "boolean"].indexOf(t) > -1 )
