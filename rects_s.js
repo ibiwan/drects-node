@@ -4,17 +4,15 @@
  *  The server, the host, the brains behind the operation.
  *  Implemented as an express() server, backed by a sqlite db generated on the fly if not present.
  */
+// npm install express body-parser morgan sqlite3 express-session password-hash-and-salt csurf handlebars promise
 
 var fs         = require('fs');
-
-// npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt csurf handlebars
 var express    = require('express');
 var Promise    = require('promise');
 
 // middlewarez
 var bodyParser = require('body-parser');
 var morgan     = require('morgan')('dev');
-var cookie     = require('cookie-parser')();
 var session    = require('express-session');
 // var csrf       = require('csurf')();
 var csrf = function(a, b, next){next();};
@@ -287,6 +285,7 @@ function setupServer(secret)
                 fs.writeFile(filepath, filedata, {}, function(err){
                     if( err ) {
                         console.log("error saving to file:", err);
+                        // this is just icing; keep going if this file can't be saved
                     }
                 });
 
@@ -366,7 +365,6 @@ function setupServer(secret)
     var port = 1338;
     var app = express()
         .use(morgan) // automatic logging ftw
-        .use(cookie)
         .use(session({
             secret: secret,
             saveUninitialized: true,
