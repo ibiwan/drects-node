@@ -377,35 +377,65 @@
 
     function handleDelete($node)
     {
+        console.log("deleting:", $node);
+
         $parent = $node.data('$composition');
         $$fields = $parent.data('$$fields');
 
-        for( var i = 0; i < $$fields.length; i++ )
-        {
-            if( $$fields[i] === $node ) {
-                $$fields.splice(i, 1); // in-place
-                $parent.data('$$fields', $$fields);
-                $data_node = $node.data('$data_node');
+        console.log("array before", $$fields);
 
-                if( $data_node.data('type') === 'formula' ) {
-                    untrack_formula_node($data_node);
-                }
-                $node.remove();
-
-                changeMade();
-                return true;
-            }
+        var idx = $$fields.indexOf($node);
+        if( idx == -1 ) {
+            return false;
         }
-        return false;
+
+        var $removed = $$fields.splice(idx, 1);
+        console.log("removed:", $removed);
+        $parent.data('$$fields', $$fields);
+
+        console.log("array after", $$fields);
+
+        for( var j = idx; j < $$fields.length; j++ )
+        {
+            var $n = $$fields[j];
+            console.log("fixing:", $n);
+            console.log(idx, j, $n.data());
+            $n.data('selector', j.toString());
+            $n.data('$label').val(j);
+        }
+
+        $data_node = $node.data('$data_node');
+        if( $data_node.data('type') === 'formula' ) {
+            untrack_formula_node($data_node);
+        }
+        $node.remove();
+
+
+        changeMade();
+
+        return true;
     }
 
     function menuItemsForNode($node) {
-        return [
+        var base = [
             {"Delete Node" : function(){handleDelete( $node);}},
-            $.contextMenu.separator,
             {"Edit Label"  : function(){handleKeyEdit($node);}},
             // items to find current node's absolute/relative path
         ];
+
+        if( $node.data('$data_node').data('type') === 'array' )
+        {
+            base.push($.contextMenu.separator);
+            base.push({"Append Node" : function(){console.log("appending node in absentia!");}});
+        }
+
+        if( $node.data('$data_node').data('type') === 'object' )
+        {
+            base.push($.contextMenu.separator);
+            base.push({"Add Member Node" : function(){console.log("adding member node in absentia!");}});
+        }
+
+        return base;
     }
 
     function popUpContextMenu(eventObject)
