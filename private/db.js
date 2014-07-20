@@ -1,7 +1,7 @@
 (function(){
 
     var Promise = require('promise');
-    var sqlite3 = require('sqlite3').verbose();
+    var sqlite3    = require('sqlite3').verbose();
     var _db;
 
     function logErr(err) {
@@ -75,7 +75,7 @@
                 else     resolve(res);
             });
         });
-    }
+            }
     function all(query, params){
         return new Promise(function (resolve, reject){
             _db.all(query, params, function (err, res){
@@ -96,14 +96,14 @@
     {
         if( full_name === undefined ) { full_name = ''; }
         return run(
-            "INSERT INTO user (username, passhash, full_name) VALUES (?, ?, ?)", 
+            "INSERT INTO user (username, passhash, full_name) VALUES (?, ?, ?)",
             [username, passhash, full_name]);
     }
 
     function updateUser(user_id, passhash, full_name)
     {
         return run(
-            "UPDATE user SET passhash=?, full_name=? WHERE id = ?", 
+            "UPDATE user SET passhash=?, full_name=? WHERE id = ?",
             [passhash, full_name, user_id]);
     }
 
@@ -120,7 +120,7 @@
         return get(
             'SELECT * FROM document WHERE owner = ? AND filename = ? ORDER BY id DESC LIMIT 1',
             [userid, filename]);
-    }
+        }
 
     function listUserDocuments(userid) 
     {

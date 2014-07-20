@@ -5,7 +5,7 @@
  */
 
 var password = require('password-hash-and-salt');
-var argv     = require('minimist')(process.argv.slice(2));
+var argv = require('minimist')(process.argv.slice(2));
 var Promise  = require('promise');
 var db       = require('./private/db');
 
@@ -35,10 +35,10 @@ password(pass).hash(function(error, hash) {
         if(result) {
             console.log("user found: ", result);
             return db.updateUser(result.id, hash, result.full_name);
-        } else {
+                } else {
             console.log("user not found; creating");
             return db.createUser(user, hash, name);
-        }
+                }
     })
     .catch(function any_error(error){
         console.log("error:", error);
