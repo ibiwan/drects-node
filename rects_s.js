@@ -230,8 +230,8 @@ function setupServer(secret)
                         });
                     })
                     .catch(function(error){
-                        res.send({success:false});
                         console.log("couldn't load:", filepath, "err:", error);
+                        res.send({success:false});
                     });
                 } else { // load from database
                     var owner_id = req.session.userid;
@@ -244,7 +244,10 @@ function setupServer(secret)
                             file     : document.content.toString()
                         });
                     })
-                    .catch(function(error){console.log("get doc error:", error); res.send({success:false});});
+                    .catch(function(error){
+                        console.log("get doc error:", error);
+                        res.send({success:false});
+                    });
                 }
 
             },
@@ -252,59 +255,40 @@ function setupServer(secret)
             {
                 console.log("savedoc()");
 
-                filename = req.body.filename;
+                var owner_id = req.session.userid;
+                var filename = req.body.filename;
+
                 console.log(filename);
 
                 var filedata = JSON.stringify(JSON.parse(req.body.file), null, '  ');
 
-                var filepath = __dirname + "/documents/saved.json";
-                fs.writeFile(filepath, filedata, {}, function(err){
-                    if( err ) {
-                        // this is just icing; keep going if this file can't be saved
+                fs.writeFile(__dirname + "/documents/saved.json", filedata, {}, function(err){
+                    if( err ) { // this is just icing; keep going if this file can't be saved
                         console.log("error saving to file:", err);
                     }
                 });
 
-                var owner_id = req.session.userid;
-
                 db.getDocument(owner_id, filename)
                 .then(function(document){
-                    if(document){
-                        console.log("updating document");
-
-                        db.createVersion(filedata, document.latest)
-                        .then(function(version){
-                            console.log("version id:", this.lastID);
-                            var versionid = this.lastID;
-                            return db.updateDocument(document.id, filename, versionid);
-                        })
-                        .then(function(document){
-                            res.json(200, {'success':true});
-                        })
-                        .catch(function(error){
-                            console.log("error updating file:", err);
-                            return res.json(500, {'success':false,'error':err});
-                        });
-                    } else {
-                        console.log("new document");
-
-                        db.createVersion(filedata, null)
-                        .then(function(version){
-                            console.log("version id:", this.lastID);
-                            var versionid = this.lastID;
-                            return db.createDocument(owner_id, filename, versionid);
-                        })
-                        .then(function(document){
-                            res.json(200, {'success':true});
-                        })
-                        .catch(function(error){
-                            console.log("error creating file:", err);
-                            return res.json(500, {'success':false,'error':err});
-                        });
-                    }
+                    db.createVersion(filedata, document ? document.latest : null)
+                    .then(function(){
+                        return db.getLastVersionId();
+                    })
+                    .then(function(version){
+                        if(document){
+                            console.log("existing document, updating");
+                            return db.updateDocument(document.id, filename, version.id);
+                        } else {
+                            console.log("new document, creating");
+                            return db.createDocument(owner_id, filename, version.id);
+                        }
+                    })
+                    .then(function(document){
+                        res.json(200, {'success':true});
+                    });
                 })
-                .catch(function(error){
-                    console.log("error while checking for document");
+                .catch(function(e){
+                    console.log("error while saving document:", e);
                     return res.json(500, {'success':false,'error':e});
                 });
             },

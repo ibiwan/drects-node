@@ -129,7 +129,12 @@
             'INSERT INTO version (datetime, content, parent) VALUES (?, ?, ?)',
             [Date.now(), content, parent_id]);
     }
-
+    function getLastVersionId()
+    {
+        return get(
+            'SELECT MAX(id) AS id FROM version',
+            []);
+    }
     function getDocumentVersion(userid, filename)
     {
         return get(
@@ -150,6 +155,7 @@
         createDocument     : createDocument,
         updateDocument     : updateDocument,
         createVersion      : createVersion,
+        getLastVersionId   : getLastVersionId,
         getDocumentVersion : getDocumentVersion,
     };
 })();
