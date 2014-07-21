@@ -1,21 +1,25 @@
 {
-  "rex-document": [
-    [
-      "1",
-      "2",
-      "15"
+  "rex-document": {
+    "A": {
+      "a": "a",
+      "b": "b",
+      "c": "c"
+    },
+    "B": {
+      "i": 1,
+      "ii": 2,
+      "iii": 3
+    },
+    "somecat": "=cat(../sources/0, ../sources/1)",
+    "sources": [
+      "W",
+      "E",
+      "R",
+      "T"
     ],
-    [
-      "A",
-      "B",
-      "C"
-    ],
-    [
-      "true",
-      "false",
-      "true"
-    ]
-  ],
+    "plus_field": "+",
+    "plus_symbol": "=/plus_field"
+  },
   "rex-config": {
     "rex-ordering": [],
     "rex-primaries": []

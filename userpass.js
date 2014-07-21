@@ -6,6 +6,8 @@
 
 var password = require('password-hash-and-salt');
 var argv = require('minimist')(process.argv.slice(2));
+var Promise  = require('promise');
+var db       = require('./private/db');
 
 var user = argv.u;
 var pass = argv.p;
@@ -21,7 +23,6 @@ if( user === null || pass === null )
 
 console.log("creating/updating user: " + user + " with password: " + pass);
 
-var db = require('./private/db');
 
 password(pass).hash(function(error, hash) {
     if(error)
@@ -29,29 +30,17 @@ password(pass).hash(function(error, hash) {
         throw new Error(error);
     }
 
-    db.getUserByName(user, {
-        found    : function(row){
-            console.log("UPDATING USER");
-            db.updateUser(row.id, hash, row.full_name, function(err){
-                if( err ) {
-                    console.log("error:", err);
+    db.checkUserExistence(user)
+    .then(function user_check_success(result) { 
+        if(result) {
+            console.log("user found: ", result);
+            return db.updateUser(result.id, hash, result.full_name);
                 } else {
-                    console.log("success!");
-                    db.dump();
+            console.log("user not found; creating");
+            return db.createUser(user, hash, name);
                 }
-            });
-        },
-        notfound : function(   ){
-            console.log("CREATING USER");
-            db.createUser(user, hash, name, function(err){
-                if( err ) {
-                    console.log("error:", err);
-                } else {
-                    console.log("success!");
-                    db.dump();
-                }
-            });
-        },
-        error    : function(err){ throw new Error(err); },
+    })
+    .catch(function any_error(error){
+        console.log("error:", error);
     });
 });
