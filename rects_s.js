@@ -4,12 +4,18 @@
  *  The server, the host, the brains behind the operation.
  *  Implemented as an express() server, backed by a sqlite db generated on the fly if not present.
  */
-// npm install express body-parser morgan sqlite3 express-session password-hash-and-salt csurf handlebars promise
+// npm install express body-parser morgan sqlite3 express-session password-hash-and-salt csurf handlebars promise proxmis
 // sudo npm install -g nodemon
 
+// libraries
 var fs         = require('fs');
 var express    = require('express');
 var Promise    = require('promise');
+var proxmis    = require('proxmis');
+var password   = require('password-hash-and-salt');
+var handlebars = require('handlebars');
+
+var db         = require('./private/db');
 
 // middlewarez
 var bodyParser = require('body-parser');
@@ -18,13 +24,6 @@ var session    = require('express-session');
 // var csrf       = require('csurf')();
 var csrf = function(a, b, next){next();};
 
-// libraries
-var sqlite3    = require('sqlite3').verbose();
-var password   = require('password-hash-and-salt');
-var handlebars = require('handlebars');
-
-var db         = require('./private/db');
-
 function logErr(err) {
     if(err) {
         console.log(err);
@@ -32,28 +31,13 @@ function logErr(err) {
 }
 
 function verifyPassAgainstHash(pass, hash){
-    return new Promise(function (resolve, reject){
-        password(pass).verifyAgainst(hash, function (err, res){
-            if (err) reject(err);
-            else     resolve(res);
-        });
-    });
+  return proxmis.wrap(function(cb){ password(pass).verifyAgainst(hash, cb); });
 }
 function listFilesystemDocs(){
-    return new Promise(function (resolve, reject){
-        fs.readdir(__dirname + '/documents', function (err, res){
-            if (err) reject(err);
-            else     resolve(res);
-        });
-    });
+  return proxmis.wrap(function(cb){ fs.readdir(__dirname + '/documents', cb); });
 }
 function readFilesystemFile(filepath){
-    return new Promise(function (resolve, reject){
-        fs.readFile(filepath, function (err, res){
-            if (err) reject(err);
-            else     resolve(res);
-        });
-    });
+  return proxmis.wrap(function(cb){ fs.readFile(filepath, cb); });
 }
 
 function makesecret()    //pseudorandom!
@@ -110,18 +94,11 @@ function setupServer(secret)
             {
                 console.log("landing()");
 
-                if( !req.session.userid ) {
-                    // if not logged in, present form
+                if( !req.session.userid ) { // not logged in
                     return renderLogin(req, res, '');
                 }
 
-                if( req.session.filename ) {
-                    // if logged in, with file set, redirect to viewer
-                    return res.redirect('/viewer');
-                } else {
-                    // if logged in with no file set, redirect to listdocs
-                    return res.redirect('/listdocs');
-                }
+                res.redirect(req.session.filename ? '/viewer' : '/listdocs');
             },
         'login'    : function login(req, res)
             {
@@ -144,7 +121,7 @@ function setupServer(secret)
                         console.log("unknown user:", user);
                         renderLogin(req, res, 'Unknown user or bad password; please try again.');
                         throw "bad user";
-                    };
+                    }
 
                     user_id = result.id;
                     return verifyPassAgainstHash(pass, result.passhash);
@@ -168,43 +145,39 @@ function setupServer(secret)
             {
                 console.log("logout()");
 
-                // invalidate session and redirect to landing
                 req.session.destroy();
                 return res.redirect('/');
             },
-        'files'    : function files(req, res)
+        'files'    : function files(req, res) // serve assets
             {
-                // serve up handy dandy js and css files
                 console.log("files("+req.params[0]+")");
+
                 res.sendfile(__dirname + '/public/' + req.params[0], logErr);
             },
         'listdocs' : function listdocs(req, res)
             {
                 console.log("listdocs()");
 
-                // present list of available files for user.
-
                 var owner_id = req.session.userid;
 
                 Promise.all([
-                    db.listUserDocuments(owner_id), 
+                    db.listUserDocuments(owner_id),
                     listFilesystemDocs()])
                 .then(function(docs){
+                    var i;
                     var userDocs = docs[0];
                     var templates = docs[1];
 
                     var out = 'User Files:<br /><ul>';
-                    for(var i in userDocs) {
+                    for(i = 0; i < userDocs.length; i++) {
                         var row = userDocs[i];
-                        var outrow = "<li><a href='/viewer/" + row.filename + "'>" + row.filename + "</a></li>";
-                        out += outrow;
+                        out += "<li><a href='/viewer/" + row.filename + "'>" + row.filename + "</a></li>";
                     }
                     out += '</ul><br />';
 
                     out += 'Template Files:<ul>';
-                    for(var i = 0; i < templates.length; i++) {
-                        var outrow = "<li><a href='/viewer/template/" + templates[i] + "'>" + templates[i] + "</a></li>";
-                        out += outrow;
+                    for(i = 0; i < templates.length; i++) {
+                        out += "<li><a href='/viewer/template/" + templates[i] + "'>" + templates[i] + "</a></li>";
                     }
                     out += '</ul>';
 
@@ -258,7 +231,7 @@ function setupServer(secret)
                     })
                     .catch(function(error){
                         res.send({success:false});
-                        console.log("couldn't load:", filepath, "err:", error);                
+                        console.log("couldn't load:", filepath, "err:", error);
                     });
                 } else { // load from database
                     var owner_id = req.session.userid;
@@ -269,7 +242,7 @@ function setupServer(secret)
                             success  : true,
                             filename : filename,
                             file     : document.content.toString()
-                        });       
+                        });
                     })
                     .catch(function(error){console.log("get doc error:", error); res.send({success:false});});
                 }
@@ -287,8 +260,8 @@ function setupServer(secret)
                 var filepath = __dirname + "/documents/saved.json";
                 fs.writeFile(filepath, filedata, {}, function(err){
                     if( err ) {
-                        console.log("error saving to file:", err);
                         // this is just icing; keep going if this file can't be saved
+                        console.log("error saving to file:", err);
                     }
                 });
 
@@ -301,7 +274,6 @@ function setupServer(secret)
 
                         db.createVersion(filedata, document.latest)
                         .then(function(version){
-                            console.log("new version:", document);
                             console.log("version id:", this.lastID);
                             var versionid = this.lastID;
                             return db.updateDocument(document.id, filename, versionid);
@@ -318,7 +290,6 @@ function setupServer(secret)
 
                         db.createVersion(filedata, null)
                         .then(function(version){
-                            console.log("new version:", document);
                             console.log("version id:", this.lastID);
                             var versionid = this.lastID;
                             return db.createDocument(owner_id, filename, versionid);
@@ -341,22 +312,18 @@ function setupServer(secret)
     };
 
     var publicRoutes = express.Router()//allow anon
-        .post('/login', 
-            bodyParser.json(), 
-            bodyParser.urlencoded({
-                extended:true,
-            }), 
+        .post('/login',
+            bodyParser.json(),
+            bodyParser.urlencoded({extended:true,}),
             csrf,                        handlers.login)
         .get ('/',                       handlers.landing)
         .get ('/files/*',                handlers.files)
         .get ('/favicon.ico',            handlers.favicon);
 
     var privateRoutes = express.Router().use(denyAnon)
-        .post('/savedoc', 
-            bodyParser.json(), 
-            bodyParser.urlencoded({
-                extended:true,
-            }), 
+        .post('/savedoc',
+            bodyParser.json(),
+            bodyParser.urlencoded({extended:true,}),
             csrf,                        handlers.savedoc)
         .get ('/logout',                 handlers.logout)
         .get ('/listdocs',               handlers.listdocs)

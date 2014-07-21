@@ -1,7 +1,8 @@
 (function(){
 
     var Promise = require('promise');
-    var sqlite3    = require('sqlite3').verbose();
+    var proxmis    = require('proxmis');
+    var sqlite3 = require('sqlite3').verbose();
     var _db;
 
     function logErr(err) {
@@ -14,7 +15,7 @@
     {
         // _db.run("delete from document");
         // _db.run("delete from version");
-        // _db.run("delete from user where id >= 3");        
+        // _db.run("delete from user where id >= 3");
     }
 
     function setupDB()
@@ -60,35 +61,14 @@
         });
     }
 
-    function get(query, params){
-        return new Promise(function (resolve, reject){
-            _db.get(query, params, function (err, res){
-                if (err) reject(err);
-                else     resolve(res);
-            });
-        });
-    }
-    function run(query, params){
-        return new Promise(function (resolve, reject){
-            _db.run(query, params, function (err, res){
-                if (err) reject(err);
-                else     resolve(res);
-            });
-        });
-            }
-    function all(query, params){
-        return new Promise(function (resolve, reject){
-            _db.all(query, params, function (err, res){
-                if (err) reject(err);
-                else     resolve(res);
-            });
-        });
-    }
+    function get(query, params){return proxmis.wrap(function(cb){ _db.get(query, params, cb); });}
+    function run(query, params){return proxmis.wrap(function(cb){ _db.run(query, params, cb); });}
+    function all(query, params){return proxmis.wrap(function(cb){ _db.all(query, params, cb); });}
 
     function checkUserExistence(username)
     {
         return get(
-            'SELECT * FROM user WHERE username = ?', 
+            'SELECT * FROM user WHERE username = ?',
             [username]);
     }
 
@@ -107,10 +87,10 @@
             [passhash, full_name, user_id]);
     }
 
-    function deleteUser(user_id) 
+    function deleteUser(user_id)
     {
         return run(
-            "DELETE FROM user WHERE id = ?", 
+            "DELETE FROM user WHERE id = ?",
             [user_id]);
     }
 
@@ -122,7 +102,7 @@
             [userid, filename]);
         }
 
-    function listUserDocuments(userid) 
+    function listUserDocuments(userid)
     {
         return all(
             'SELECT * FROM document WHERE owner = ?',
