@@ -8,6 +8,8 @@
 var fs         = require('fs');
 
 // npm install express body-parser morgan sqlite3 cookie-parser express-session password-hash-and-salt csurf handlebars
+// sudo npm install -g nodemon
+
 var express    = require('express');
 
 // middlewarez
@@ -308,22 +310,22 @@ function setupServer(secret)
     };
 
     var publicRoutes = express.Router()//allow anon
-        .post('/login', 
-            bodyParser.json(), 
+        .post('/login',
+            bodyParser.json(),
             bodyParser.urlencoded({
                 extended:true,
-            }), 
+            }),
             csrf,                        handlers.login)
         .get ('/',                        handlers.landing)
         .get ('/files/*',                 handlers.files)
         .get ('/favicon.ico',             handlers.favicon);
 
     var privateRoutes = express.Router().use(denyAnon)
-        .post('/savedoc', 
-            bodyParser.json(), 
+        .post('/savedoc',
+            bodyParser.json(),
             bodyParser.urlencoded({
                 extended:true,
-            }), 
+            }),
             csrf,                        handlers.savedoc)
         .get ('/logout',                    handlers.logout)
         .get ('/listdocs',                  handlers.listdocs)
