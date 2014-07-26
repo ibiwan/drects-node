@@ -151,7 +151,13 @@
         var $labelstack = $field.data('$labelstack');
 
         // update collapser icon
-        var direction  = ($data_node.data('state') == 'shown') ? 'close' : 'open';
+        var direction;
+        if( $data_node.data ) {
+            console.log("OLD SCHOOL");
+            direction  = ($data_node.data('state') == 'shown') ? 'close' : 'open';
+        } else if( $data_node.getState() ) {
+            direction  = $data_node.shown() ? 'close' : 'open';
+        }
         var type = $field.data('type');
 
         // arrow is first child of controller ("this")
@@ -159,7 +165,11 @@
 
         if( direction === 'open' )
         {
-            $data_node.show().data('state','shown');
+            $data_node.show();
+            if( $data_node.data ) {
+                console.log("OLD SCHOOL");
+                $data_node.data('state','shown');
+            }
 
             if( $summary )
             {
@@ -170,12 +180,24 @@
                 $labelstack.removeClass('horizontal').addClass('vertical');
             }
 
-            $data_node.removeClass('hidden');
+            if( $data_node.removeClass )
+            {
+                console.log("OLD SCHOOL");
+                $data_node.removeClass('hidden');
+            }
        } else {
-            $data_node.addClass('hidden');
+            if( $data_node.addClass )
+            {
+                console.log("OLD SCHOOL");
+                $data_node.addClass('hidden');                
+            }
 
             setTimeout(function(){
-                $data_node.hide().data('state','hidden');
+                $data_node.hide();
+                if( $data_node.data ) {
+                    console.log("OLD SCHOOL");
+                    $data_node.data('state','hidden');
+                }
 
                 if( $summary )
                 {

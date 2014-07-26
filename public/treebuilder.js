@@ -22,8 +22,17 @@
     var _track_formula_node = null;
 
     function addbackrefs($$children, $parent, parent_name) {
+        console.log("adding:", $$children, $parent, parent_name);
         for (var i = 0; i < $$children.length; i++) {
-            $$children[i].data(parent_name, $parent);
+            $child = $$children[i];
+            if( $child.data ) {
+                console.log("OLD SCHOOL");
+                $child.data(parent_name, $parent);
+            } else if ( $child.setParent ) {
+                $child.setParent($parent, parent_name);
+            } else {
+                throw "I don't know how to add backrefs to this:" + $child;
+            }
         }
     }
     function $newdiv(type, value)
@@ -32,7 +41,11 @@
     }
     function $make_field_stack(type, selector, $data_node)
     {
-        $data_node.data('state', 'shown');
+        if($data_node.setState){
+            $data_node.setState('shown');
+        } else if($data_node.data) {
+            $data_node.data('state', 'shown');
+        }
 
         var $controller = $newdiv('controller', '<i class="' + _collapsers[type + '-open'] + '"></i>');
         var $label      = $newdiv('label', selector).addClass(type+'label');
@@ -71,34 +84,34 @@
 
         return $type_selector;
     }
-    function $make_scalar(type, data)
-    {
-        var $value_display = $newdiv('value_display', data).addClass(type);
-        var $type_selector = $make_type_selector(type).hide();
-        var $value_edit    = $('<input type="text" value=""></input>').hide();
+    // function $make_scalar(type, data)
+    // {
+    //     var $value_display = $newdiv('value_display', data).addClass(type);
+    //     var $type_selector = $make_type_selector(type).hide();
+    //     var $value_edit    = $('<input type="text" value=""></input>').hide();
 
-        var $scalar = $newdiv('scalar', '')
-            .addClass('horizontal')
+    //     var $scalar = $newdiv('scalar', '')
+    //         .addClass('horizontal')
 
-            .append($value_display).data('$value_display', $value_display)
-            .append($type_selector).data('$type_selector', $type_selector)
-            .append(   $value_edit).data(   '$value_edit',    $value_edit)
+    //         .append($value_display).data('$value_display', $value_display)
+    //         .append($type_selector).data('$type_selector', $type_selector)
+    //         .append(   $value_edit).data(   '$value_edit',    $value_edit)
 
-            .data('type',          type)
-            .data('raw_value',     data)
-            .data('display_value', data) // will only differ for formula nodes
-        ;
+    //         .data('type',          type)
+    //         .data('raw_value',     data)
+    //         .data('display_value', data) // will only differ for formula nodes
+    //     ;
 
-        addbackrefs([$value_display, $type_selector, $value_edit], $scalar, '$scalar');
+    //     addbackrefs([$value_display, $type_selector, $value_edit], $scalar, '$scalar');
 
-        if( type === 'formula' )
-        {
-            // formula_nodes.push($scalar);
-            _track_formula_node($scalar);
-        }
+    //     if( type === 'formula' )
+    //     {
+    //         // formula_nodes.push($scalar);
+    //         _track_formula_node($scalar);
+    //     }
 
-        return $scalar;
-    }
+    //     return $scalar;
+    // }
     function $make_array(data, primaryvalue)
     {
         var $array = $newdiv('array', '').data('type', 'array');
@@ -109,6 +122,8 @@
             var summary_holder = {};
             var $data_node     = gentree(data[i], primaryvalue, summary_holder);
             var summarystr     = (summary_holder.val === undefined)  ? '' : summary_holder.val;
+
+            console.log($data_node);
 
             var $field = $make_field_stack('element', i, $data_node)
                 .data('$composition', $array);
@@ -218,7 +233,7 @@
             {
                 t = "formula";
             }
-            return $make_scalar(t, data);
+            return make_scalar({type:t, data:data});
         }
         if( data instanceof Array )
         {
@@ -239,6 +254,136 @@
         _collapsers = collapsers;
         _track_formula_node = track_formula_node;
         return gentree(data, 'root', summary_holder);
+    }
+
+    // spec  : params
+    // my    : protected
+    // local : private
+    // that  : public
+
+    var make_node = function (spec, my) {
+        var that;      //, other private instance variables; 
+        my = my || {}; //Add shared variables and functions to my 
+        that = {}      //a new object; // call other makers here
+        
+        console.log("constructing node");
+        //Add privileged methods to that (define methods then reference)
+        
+        return that;
+    };
+
+    var make_collection = function (spec, my) {
+        var that;
+        my = my || {};
+        that = make_node(spec, my);
+        console.log("constructing collection");
+        return that;
+    }
+
+    var make_array = function (spec, my) {
+        var that;
+        my = my || {};
+        that = make_collection(spec, my);
+        console.log("constructing array");
+        return that;
+    }
+
+    var make_object = function (spec, my) {
+        var that;
+        my = my || {};
+        that = make_collection(spec, my);
+        console.log("constructing object");
+        return that;
+    }
+
+    var make_primitive = function (spec, my) {
+        var that;
+        my = my || {};
+        that = make_node(spec, my);
+        console.log("constructing primitive");
+        return that;
+    }
+
+    var make_table = function (spec, my) {
+        var that;
+        my = my || {};
+        that = make_primitive(spec, my);
+        console.log("constructing table");
+        return that;
+    }
+
+    var make_scalar = function (spec, my) { // spec: type, data
+        var that;
+        my = my || {};
+        that = make_primitive(spec, my);
+        console.log("constructing scalar");
+
+        my.state         = 'shown';
+        my.type          = spec.type;
+        my.raw_value     = spec.data;
+        my.display_value = my.raw_value; // will only differ for formula nodes
+
+        my.$value_display = $newdiv('value_display', my.raw_value).addClass(my.type);
+        my.$type_selector = $make_type_selector(my.type).hide();
+        my.$value_edit    = $('<input type="text" value=""></input>').hide();
+
+        my.$scalar = $newdiv('scalar horizontal', '')
+            .append(my.$value_display)
+            .append(my.$type_selector)
+            .append(my.$value_edit)
+        ;
+
+        var show = function() 
+        { 
+            my.state = 'shown'; 
+            my.$scalar.removeClass('hidden');
+            my.$scalar.hide();
+        }
+        var hide = function() 
+        { 
+            my.state = 'hidden'; 
+            my.$scalar.addClass('hidden');
+            my.$scalar.show();
+        }
+        var shown = function() 
+        { 
+            return (my.state === 'shown'); 
+        }
+
+        var getType = function(     ) { return my.type; }
+        var setType = function(type ) { my.type = type; }
+
+        var getData = function(     ) { return my.raw_value; }
+        var setData = function(data ) {
+            my.raw_value     = data;
+            my.display_value = data;
+        }
+
+        var setParent = function(parent, parent_name) {
+            my.parent = parent;
+            console.log("setting parent named:", parent_name);
+        }
+
+        that.show      = show;
+        that.hide      = hide;
+        that.shown     = shown;
+
+        that.getType   = getType;
+        that.setType   = setType;
+
+        that.getData   = getData;
+        that.setData   = setData;
+        
+        that.setParent = setParent;
+
+        addbackrefs([my.$value_display, my.$type_selector, my.$value_edit], that, '$scalar');
+
+        if( my.type === 'formula' )
+        {
+            _track_formula_node(that);
+        }
+
+        return that;
     }
 
     return {
