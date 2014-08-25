@@ -22,7 +22,6 @@
     var _track_formula_node = null;
 
     function addbackrefs($$children, $parent, parent_name) {
-        console.log("adding:", $$children, $parent, parent_name);
         for (var i = 0; i < $$children.length; i++) {
             $child = $$children[i];
             if( $child.data ) {
@@ -123,7 +122,7 @@
             var $data_node     = gentree(data[i], primaryvalue, summary_holder);
             var summarystr     = (summary_holder.val === undefined)  ? '' : summary_holder.val;
 
-            console.log($data_node);
+            // console.log($data_node);
 
             var $field = $make_field_stack('element', i, $data_node)
                 .data('$composition', $array);
@@ -259,14 +258,14 @@
     // spec  : params
     // my    : protected
     // local : private
-    // that  : public
+    // that  : public interface
 
     var make_node = function (spec, my) {
         var that;      //, other private instance variables; 
         my = my || {}; //Add shared variables and functions to my 
         that = {}      //a new object; // call other makers here
         
-        console.log("constructing node");
+        // console.log("constructing node");
         //Add privileged methods to that (define methods then reference)
         
         return that;
@@ -276,7 +275,7 @@
         var that;
         my = my || {};
         that = make_node(spec, my);
-        console.log("constructing collection");
+        // console.log("constructing collection");
         return that;
     }
 
@@ -284,7 +283,7 @@
         var that;
         my = my || {};
         that = make_collection(spec, my);
-        console.log("constructing array");
+        // console.log("constructing array");
         return that;
     }
 
@@ -292,7 +291,7 @@
         var that;
         my = my || {};
         that = make_collection(spec, my);
-        console.log("constructing object");
+        // console.log("constructing object");
         return that;
     }
 
@@ -300,7 +299,7 @@
         var that;
         my = my || {};
         that = make_node(spec, my);
-        console.log("constructing primitive");
+        // console.log("constructing primitive");
         return that;
     }
 
@@ -308,15 +307,16 @@
         var that;
         my = my || {};
         that = make_primitive(spec, my);
-        console.log("constructing table");
+        // console.log("constructing table");
         return that;
     }
 
-    var make_scalar = function (spec, my) { // spec: type, data
+    var make_scalar = function (spec, my) { // spec: {type:, data:}
         var that;
         my = my || {};
         that = make_primitive(spec, my);
-        console.log("constructing scalar");
+
+        // construct object
 
         my.state         = 'shown';
         my.type          = spec.type;
@@ -333,17 +333,26 @@
             .append(my.$value_edit)
         ;
 
+        addbackrefs([my.$value_display, my.$type_selector, my.$value_edit], that, '$scalar');
+
+        if( my.type === 'formula' )
+        {
+            _track_formula_node(that);
+        }
+
+        // define methods
+
         var show = function() 
         { 
             my.state = 'shown'; 
             my.$scalar.removeClass('hidden');
-            my.$scalar.hide();
+            // my.$scalar.hide();
         }
         var hide = function() 
         { 
             my.state = 'hidden'; 
             my.$scalar.addClass('hidden');
-            my.$scalar.show();
+            // my.$scalar.show();
         }
         var shown = function() 
         { 
@@ -361,8 +370,9 @@
 
         var setParent = function(parent, parent_name) {
             my.parent = parent;
-            console.log("setting parent named:", parent_name);
         }
+
+        // set up interface
 
         that.show      = show;
         that.hide      = hide;
@@ -376,12 +386,7 @@
         
         that.setParent = setParent;
 
-        addbackrefs([my.$value_display, my.$type_selector, my.$value_edit], that, '$scalar');
-
-        if( my.type === 'formula' )
-        {
-            _track_formula_node(that);
-        }
+        // return interface
 
         return that;
     }

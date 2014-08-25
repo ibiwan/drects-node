@@ -155,13 +155,21 @@
         if( $data_node.data ) {
             console.log("OLD SCHOOL");
             direction  = ($data_node.data('state') == 'shown') ? 'close' : 'open';
-        } else if( $data_node.getState() ) {
+        } else if( $data_node.shown ) {
             direction  = $data_node.shown() ? 'close' : 'open';
         }
-        var type = $field.data('type');
+
+        var type;
+        if( $field.data )
+        {
+            type = $field.data('type');
+        } else {
+            type = $field.getType();
+        }
 
         // arrow is first child of controller ("this")
-        $($(this).children(':first')).attr('class', collapsers[type + '-' + direction]);
+        $arrow = $($(this).children(':first'));
+        $arrow.attr('class', collapsers[type + '-' + direction]);
 
         if( direction === 'open' )
         {
