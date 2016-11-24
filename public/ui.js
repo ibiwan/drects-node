@@ -1,26 +1,23 @@
 (function(init){  // deps
     if ( typeof module === 'object' && module && typeof module.exports === 'object' ) {
-        // node
-        require('./include/jquery');
-        require('./include/jquery-ui');
-        require('./include/jquery.contextmenu.js');
-        require('./include/vue');
-
+        // node mode
         module.exports = init(
+            require('./include/jquery'),
+            require('./include/vue'),
             require('./parser'),
             require('./log').log,
             require('./treebuilder'),
             require('./config')
         );
     } else if ( typeof define === 'function' && define.amd ) {
-        // "amd" (require.js)
+        // "amd" (require.js) mode
         define(
             ['jquery', 'jquery-ui', 'contextmenu', 'vue', './parser', './log', './treebuilder', './config'],
-            function (jquery_dummy, jquery_ui_dummy, context_menu_dummy, vue_dummy, parser, log, treebuilder, config) {
-                return init(parser, log.log, treebuilder, config);
+            function (jquery, jquery_ui, context_menu, vue, parser, log, treebuilder, config) {
+                return init(jquery, vue, parser, log.log, treebuilder, config);
             });
     }
-})(function(parser, log, treebuilder, config){ // init
+})(function($, vue, parser, log, treebuilder, config){ // init
 
     var docroot = 'rex-document';
     var configroot = config.configroot;
@@ -439,23 +436,24 @@
 console.log('a');
 
     $(function initVue(){
-        console.log($("#object-template").clone());
-        Vue.component('object', {
+        console.log($("#object-template").html());
+
+        vue.component('dr-object', {
             props: [],
             template: $('#object-template').clone()
         });
 
-        vue.component('object-member', {
+        vue.component('dr-object-member', {
             props: [],
             template: '<div class="member"></div>'
         });
 
-        vue.component('array', {
+        vue.component('dr-array', {
             props: [],
             template: '<div class="array"></div>'
         });
 
-        vue.component('array-element', {
+        vue.component('dr-array-element', {
             props: [],
             template: '<li>{{ todo.text }}</li>'
         });
