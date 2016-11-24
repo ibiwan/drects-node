@@ -1,21 +1,40 @@
 <!DOCTYPE html>
 <html>
+
     <head>
         <meta charset="UTF-8">
         <title>D&amp;D Sheets</title>
-
         <script data-main="/files/app.js" src="/files/include/require.js"></script>
-
         <link rel="stylesheet" href="/files/include/jquery-ui/css/smoothness/jquery-ui-1.10.4.custom.css" />
         <link href="/files/include/font-awesome/css/font-awesome.css" rel="stylesheet">
         <link href="/files/include/jquery.contextmenu.css" rel="stylesheet">
         <link href="/files/rects.css" rel="stylesheet">
     </head>
+
     <body>
         <!-- <div id="instructions">Click on chevrons to expand/collapse.</div> -->
         <div id="message"></div>
-        <a href="/listdocs">choose file</a><br />
+        <a href="/listdocs">choose file</a>
+        <br />
         <a href="/logout">logout</a>
         <div id="document"></div>
+        <div id="document2"></div>
     </body>
+
+    <template id="object-template">
+        <div class="object"></div>
+    </template>
+
+    <template id="object-member-template">
+        <div class="member"></div>
+    </template>
+
+    <template id="array-template">
+        <div class="array"></div>
+    </template>
+
+    <template id="array-element-template">
+        <div class="element"></div>
+    </template>
+
 </html>

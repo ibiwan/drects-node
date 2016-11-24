@@ -5,7 +5,7 @@
  */
 
 var password = require('password-hash-and-salt');
-var argv = require('minimist')(process.argv.slice(2));
+var argv     = require('minimist')(process.argv.slice(2));
 var Promise  = require('promise');
 var db       = require('./private/db');
 

@@ -1,0 +1,34 @@
+{
+  "name": "drects-node",
+  "version": "1.0.0",
+  "description": "- [Concept](#user-content-concept)     - [Problem](#user-content-problem)     - [Solution](#user-content-solution) - [Usage](#user-content-usage)     - [Formulas](#user-content-formulas)     - [Future editing capabilities:](#user-content-future-editing-capabilities)     - [Per-document preferences](#user-content-per-document-preferences) - [Installation](#user-content-installation) - [Direction](#user-content-direction)",
+  "main": "harness.js",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "cookie-parser": "^1.4.3",
+    "csurf": "^1.9.0",
+    "express": "^4.14.0",
+    "express-session": "^1.14.2",
+    "handlebars": "^4.0.6",
+    "minimist": "^1.2.0",
+    "morgan": "^1.7.0",
+    "password-hash-and-salt": "^0.1.4",
+    "promise": "^7.1.1",
+    "proxmis": "^1.0.0",
+    "sqlite3": "^3.1.8"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://ibiwan@github.com/ibiwan/drects-node.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ibiwan/drects-node/issues"
+  },
+  "homepage": "https://github.com/ibiwan/drects-node#readme"
+}
