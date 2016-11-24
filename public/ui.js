@@ -4,6 +4,7 @@
         require('./include/jquery');
         require('./include/jquery-ui');
         require('./include/jquery.contextmenu.js');
+        require('./include/vue');
 
         module.exports = init(
             require('./parser'),
@@ -14,8 +15,8 @@
     } else if ( typeof define === 'function' && define.amd ) {
         // "amd" (require.js)
         define(
-            ['jquery', 'jquery-ui', 'contextmenu', './parser', './log', './treebuilder', './config'],
-            function (jquery_dummy, jquery_ui_dummy, context_menu_dummy, parser, log, treebuilder, config) {
+            ['jquery', 'jquery-ui', 'contextmenu', 'vue', './parser', './log', './treebuilder', './config'],
+            function (jquery_dummy, jquery_ui_dummy, context_menu_dummy, vue_dummy, parser, log, treebuilder, config) {
                 return init(parser, log.log, treebuilder, config);
             });
     }
@@ -435,6 +436,32 @@
         save();
     }
 
+console.log('a');
+
+    $(function initVue(){
+        console.log($("#object-template").clone());
+        Vue.component('object', {
+            props: [],
+            template: $('#object-template').clone()
+        });
+
+        vue.component('object-member', {
+            props: [],
+            template: '<div class="member"></div>'
+        });
+
+        vue.component('array', {
+            props: [],
+            template: '<div class="array"></div>'
+        });
+
+        vue.component('array-element', {
+            props: [],
+            template: '<li>{{ todo.text }}</li>'
+        });
+
+    });
+
     $(function initialize(){
         $("body").disableSelection();
 
@@ -466,6 +493,9 @@
 
                 registerHandlers();
                 calculateFormulas();
+
+
+                var doc2 = $('#document2');
 
                 // printdom(doc);
                 // save();

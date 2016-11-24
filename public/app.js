@@ -3,7 +3,8 @@ requirejs.config({
     "paths"   : {
         "jquery"      : "include/jquery",
         "jquery-ui"   : "include/jquery-ui",
-        "contextmenu" : "include/jquery.contextmenu"
+        "contextmenu" : "include/jquery.contextmenu",
+        "vue"         : "include/vue"
     },
 });
 
