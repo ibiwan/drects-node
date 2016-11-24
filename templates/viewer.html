@@ -18,23 +18,60 @@
         <br />
         <a href="/logout">logout</a>
         <div id="document"></div>
-        <div id="document2"></div>
+        <div id="document2">
+            <dr-object :members="document"></dr-object>
+        </div>
     </body>
-
     <template id="object-template">
-        <div class="dr-object"></div>
+        <div class="object">
+            <template v-for="(member, key) in members">
+                <div class="member">
+                    <div class="labelstack horizontal">
+                        <div class="controller">
+                            <i class="fa fa-chevron-down"></i>
+                        </div>
+                        <div class="label memberlabel">{{ key }}</div>
+                        <input type="text" value="" style="display: none;">
+                    </div>
+                    <dr-variant :datum="member"></dr-variant>
+                </div>
+            </template>
+        </div>
     </template>
-
-    <template id="object-member-template">
-        <div class="dr-member"></div>
-    </template>
-
     <template id="array-template">
-        <div class="dr-array"></div>
+        <div class="array">
+            <template v-for="(element, index) in elements">
+                <div class="element">
+                    <div class="labelstack vertical">
+                        <div class="controller">
+                            <i class="fa fa-chevron-right"></i>
+                        </div>
+                        <div class="label elementlabel">{{ index }}</div>
+                        <input type="text" value="" style="display: none;">
+                    </div>
+                    <dr-variant :datum="element"></dr-variant>
+                    <div class="summary" style="display: none;">summary</div>
+                </div>
+            </template>
+        </div>
     </template>
-
-    <template id="array-element-template">
-        <div class="dr-element"></div>
+    <template id="scalar-template">
+        <div class="scalar horizontal">
+            <div class="value_display" :class="type">{{ value }}</div>
+            <select style="display: none;">
+                <option value="null" :selected="type==='null'">null</option>
+                <option value="boolean" :selected="type==='boolean'">boolean</option>
+                <option value="number" :selected="type==='number'">number</option>
+                <option value="string" :selected="type==='string'">string</option>
+                <option value="formula" :selected="type==='formula'">formula</option>
+            </select>
+            <input type="text" value="" style="display: none;">
+        </div>
+    </template>
+    <template id="variant-template">
+        <dr-array :elements="datum" v-if="datum instanceof Array"></dr-array>
+        <dr-object :members="datum" v-else-if="datum instanceof Object"></dr-object>
+        <dr-scalar :value="datum" v-else></dr-scalar>
     </template>
 
 </html>

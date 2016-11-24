@@ -433,32 +433,59 @@
         save();
     }
 
-console.log('a');
-
-    $(function initVue(){
-        console.log($("#object-template").html());
+    function initVue(file_data, config){
+        console.log(file_data);
 
         vue.component('dr-object', {
-            props: [],
-            template: $('#object-template').clone()
-        });
-
-        vue.component('dr-object-member', {
-            props: [],
-            template: '<div class="member"></div>'
+            props: ['members'],
+            template: $('#object-template').html()
         });
 
         vue.component('dr-array', {
-            props: [],
-            template: '<div class="array"></div>'
+            props: ['elements'],
+            template: $('#array-template').html()
         });
 
-        vue.component('dr-array-element', {
-            props: [],
-            template: '<li>{{ todo.text }}</li>'
+        vue.component('dr-scalar', {
+            props: ['value'],
+            template: $('#scalar-template')
+                .html(),
+            computed: {
+                type: function() {
+                    var t = typeof(this.value);
+                    if (t === 'string' && this.value[0] === '=') {
+                        t = "formula";
+                    }
+                    return t;
+                }
+            }
+        });
+        vue.component('dr-variant', {
+            props: ['datum'],
+            template: $('#variant-template').html()
         });
 
-    });
+        var vApp = new vue({
+            el: '#document2',
+            data: {
+                document: file_data
+            }
+        })
+    }
+
+    function initLegacy(file_data, config){
+        var doc = treebuilder.build(file_data, config, collapsers, track_formula_node);
+
+        var $htmlroot = $('#document')
+            .append(doc)
+            .data('document', doc);
+
+        registerHandlers();
+        calculateFormulas();
+
+        // printdom(doc);
+        // save();
+    }
 
     $(function initialize(){
         $("body").disableSelection();
@@ -483,20 +510,8 @@ console.log('a');
                     file_data = file_data[docroot];
                 }
 
-                var doc = treebuilder.build(file_data, config, collapsers, track_formula_node);
-
-                var $htmlroot = $('#document')
-                    .append(doc)
-                    .data('document', doc);
-
-                registerHandlers();
-                calculateFormulas();
-
-
-                var doc2 = $('#document2');
-
-                // printdom(doc);
-                // save();
+                initLegacy(file_data, config);
+                initVue(file_data, config);
             });
     });
 });
