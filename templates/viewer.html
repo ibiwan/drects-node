@@ -24,35 +24,37 @@
     </body>
     <template id="object-template">
         <div class="object">
-            <template v-for="(member, key) in members">
-                <div class="member">
-                    <div class="labelstack horizontal">
-                        <div class="controller">
-                            <i class="fa fa-chevron-down"></i>
-                        </div>
-                        <div class="label memberlabel">{{ key }}</div>
-                        <input type="text" value="" style="display: none;">
-                    </div>
-                    <dr-variant :datum="member"></dr-variant>
+            <dr-member v-for="(member, hash) in members" :member="member" :hash="hash"></dr-member>
+        </div>
+    </template>
+    <template id="member-template">
+        <div class="member">
+            <div class="labelstack horizontal">
+                <div class="controller" @click="click">
+                    <i :class="mode==='expanded' ? collapsers['member-open'] : collapsers['member-close']"></i>
                 </div>
-            </template>
+                <div class="label memberlabel">{{ hash }}</div>
+                <input type="text" value="" style="display: none;">
+            </div>
+            <dr-variant :datum="member" :class="{hidden:mode!=='expanded'}"></dr-variant>
         </div>
     </template>
     <template id="array-template">
         <div class="array">
-            <template v-for="(element, index) in elements">
-                <div class="element">
-                    <div class="labelstack vertical">
-                        <div class="controller">
-                            <i class="fa fa-chevron-right"></i>
-                        </div>
-                        <div class="label elementlabel">{{ index }}</div>
-                        <input type="text" value="" style="display: none;">
-                    </div>
-                    <dr-variant :datum="element"></dr-variant>
-                    <div class="summary" style="display: none;">summary</div>
+            <dr-element v-for="(element, index) in elements" :element="element" :index="index"></dr-element>
+        </div>
+    </template>
+    <template id="element-template">
+        <div class="element">
+            <div class="labelstack vertical">
+                <div class="controller" @click="click">
+                    <i :class="mode==='expanded' ? collapsers['element-open'] : collapsers['element-close']"></i>
                 </div>
-            </template>
+                <div class="label elementlabel">{{ index }}</div>
+                <input type="text" value="" style="display: none;">
+            </div>
+            <dr-variant :datum="element" :class="{hidden:mode!=='expanded'}"></dr-variant>
+            <div class="summary" style="display: none;">summary</div>
         </div>
     </template>
     <template id="scalar-template">
