@@ -23,7 +23,7 @@
     </body>
     <template id="object-template">
         <div class="object">
-            <dr-member v-for="(member, hash) in members" :member="member" :hash="hash"></dr-member>
+            <dr-member v-for="keyVal in sortedMembers" :member="keyVal.v" :hash="keyVal.k"></dr-member>
         </div>
     </template>
     <template id="member-template">

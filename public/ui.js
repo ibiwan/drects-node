@@ -7,18 +7,17 @@
             require('./parser'),
             require('./log')
             .log,
-            require('./treebuilder'),
             require('./config')
         );
     } else if (typeof define === 'function' && define.amd) {
         // "amd" (require.js) mode
         define(
-            ['jquery', 'jquery-ui', 'contextmenu', 'vue', './parser', './log', './treebuilder', './config'],
-            function(jquery, jquery_ui, context_menu, vue, parser, log, treebuilder, config) {
-                return init(jquery, vue, parser, log.log, treebuilder, config);
+            ['jquery', 'jquery-ui', 'contextmenu', 'vue', './parser', './log', './config'],
+            function(jquery, jquery_ui, context_menu, vue, parser, log, config) {
+                return init(jquery, vue, parser, log.log, config);
             });
     }
-})(function($, vue, parser, log, treebuilder, config) { // init
+})(function($, vue, parser, log, config) { // init
 
     var docroot = 'rex-document';
     var configroot = config.configroot;
@@ -339,13 +338,66 @@
         save();
     }
 
+    function sortKeys(keys) {
+        var config_keys = config.forkey('rex-ordering');
+
+        var key;
+        var sorted_keys = [];
+        var whatever_keys = [];
+        var all_keys = [];
+
+        for (var i = 0; i < keys.length; i++) {
+            key = keys[i];
+            if (config_keys.indexOf(key) > -1) {
+                sorted_keys.push(key);
+            } else {
+                whatever_keys.push(key);
+            }
+        }
+
+        // if OTHER is present in sorting config, "whatever" (un-sorted) fields take its place in the order.
+
+        for (i = 0; i < config_keys.length; i++) {
+            key = config_keys[i];
+            if (key === 'OTHER') {
+                all_keys = all_keys.concat(whatever_keys);
+                whatever_keys = [];
+            } else if (sorted_keys.indexOf(key) > -1) {
+                all_keys.push(key);
+            }
+        }
+
+        // otherwise, they go at the end.
+
+        all_keys = all_keys.concat(whatever_keys);
+
+        return all_keys;
+    }
+
+    function getKeys(obj) {
+        var keys = [];
+        for (var key in obj) {
+            keys.push(key);
+        }
+        return sortKeys(keys);
+    }
+
     function initVue(file_data, config) {
         console.log(file_data);
 
         vue.component('dr-object', {
             props: ['members'],
             template: $('#object-template')
-                .html()
+                .html(),
+            computed: {
+                sortedMembers: function() {
+                    var members = this.members;
+                    return getKeys(members)
+                        .map(function(key) {
+                            return { k: key, v: members[key] };
+                        });
+                }
+            }
         });
 
         vue.component('dr-member', {
@@ -408,7 +460,7 @@
                 }
             },
             methods: {
-                dblclick: function(event){
+                dblclick: function(event) {
                     console.log("double-clicked:", this);
                 }
             }
@@ -428,7 +480,7 @@
         })
     }
 
-    function initLegacy(file_data, config) {     
+    function initLegacy(file_data, config) {
         registerHandlers();
         calculateFormulas();
     }
