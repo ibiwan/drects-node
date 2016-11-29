@@ -1,47 +1,46 @@
-.object2 {
-    display                : -webkit-flex;
-    -webkit-flex-direction : row;
-    -webkit-flex-wrap      : nowrap;
-    display        : flex;
-    flex-direction : row;
-    flex-wrap      : nowrap;
-    overflow-x     : scroll;
-}
 .array, .member, .vertical {
     display                : -webkit-flex;
     -webkit-flex-direction : column;
     -webkit-flex-wrap      : nowrap;
-    display        : flex;
-    flex-direction : column;
-    flex-wrap      : nowrap;
+    display                : flex;
+    flex-direction         : column;
+    flex-wrap              : nowrap;
+    background             : #abc;
 }
+
 .object, .element, .horizontal {
     display                : -webkit-flex;
     -webkit-flex-direction : row;
     -webkit-flex-wrap      : wrap;
-    display        : flex;
-    flex-direction : row;
-    flex-wrap      : wrap;
+    display                : flex;
+    flex-direction         : row;
+    flex-wrap              : wrap;
+    background             : #cba;
 }
+
 .label {
     font-weight : bold;
 }
+
 * {
     /*outline : 1px solid #DDD;*/
     padding : 2px;
-    opacity : 1.0;
-    -webkit-transition : opacity 1s;
-    -moz-transition    : opacity 1s;
-    -o-transition      : opacity 1s;
-    transition         : opacity 1s;
+    margin  : 0px;
 }
-.hidden {
-    opacity : 0.0 !important;
-}
+
 /*.string, .null, .number, .boolean, .member, .element, .value_display, .scalar{*/
 .value_display, .member, .element, .summary, .contextmenu {
-    outline : 1px solid black;
+    /*outline : 1px solid black;*/
 }
+
 #message {
     color : red;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition : opacity .5s
+}
+
+.fade-enter, .fade-leave-active {
+  opacity : 0;
 }

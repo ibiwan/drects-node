@@ -17,8 +17,7 @@
         <a href="/listdocs">choose file</a>
         <br />
         <a href="/logout">logout</a>
-        <div id="document"></div>
-        <div id="document2">
+        <div id="document">
             <dr-object :members="document"></dr-object>
         </div>
     </body>
@@ -31,34 +30,38 @@
         <div class="member">
             <div class="labelstack horizontal">
                 <div class="controller" @click="click">
-                    <i :class="mode==='expanded' ? collapsers['member-open'] : collapsers['member-close']"></i>
+                    <i :class="expanded ? collapsers['member-open'] : collapsers['member-close']"></i>
                 </div>
                 <div class="label memberlabel">{{ hash }}</div>
                 <input type="text" value="" style="display: none;">
             </div>
-            <dr-variant :datum="member" :class="{hidden:mode!=='expanded'}"></dr-variant>
+            <transition name="fade">
+                <dr-variant :datum="member" :owner="hash" v-if="expanded"></dr-variant>
+            </transition>
         </div>
     </template>
     <template id="array-template">
         <div class="array">
-            <dr-element v-for="(element, index) in elements" :element="element" :index="index"></dr-element>
+            <dr-element v-for="(element, index) in elements" :element="element" :index="index" :summary-field="summaryField"></dr-element>
         </div>
     </template>
     <template id="element-template">
         <div class="element">
             <div class="labelstack vertical">
                 <div class="controller" @click="click">
-                    <i :class="mode==='expanded' ? collapsers['element-open'] : collapsers['element-close']"></i>
+                    <i :class="expanded ? collapsers['element-open'] : collapsers['element-close']"></i>
                 </div>
                 <div class="label elementlabel">{{ index }}</div>
                 <input type="text" value="" style="display: none;">
             </div>
-            <dr-variant :datum="element" :class="{hidden:mode!=='expanded'}"></dr-variant>
-            <div class="summary" style="display: none;">summary</div>
+            <transition name="fade">
+                <dr-variant :datum="element" v-if="expanded"></dr-variant>
+                <div class="summary" v-else>{{ summary }}</div>
+            </transition>
         </div>
     </template>
     <template id="scalar-template">
-        <div class="scalar horizontal">
+        <div class="scalar horizontal" @dblclick="dblclick">
             <div class="value_display" :class="type">{{ value }}</div>
             <select style="display: none;">
                 <option value="null" :selected="type==='null'">null</option>
@@ -71,7 +74,7 @@
         </div>
     </template>
     <template id="variant-template">
-        <dr-array :elements="datum" v-if="datum instanceof Array"></dr-array>
+        <dr-array :elements="datum" :owner="owner" v-if="datum instanceof Array"></dr-array>
         <dr-object :members="datum" v-else-if="datum instanceof Object"></dr-object>
         <dr-scalar :value="datum" v-else></dr-scalar>
     </template>

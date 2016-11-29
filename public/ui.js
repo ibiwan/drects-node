@@ -50,70 +50,9 @@
         }
     }
 
-    function printdom(htmlnode, depth) {
-        if (!depth) depth = 0;
-        var tab = Array(depth + 1)
-            .join("  ");
-        var type = htmlnode.data('type');
-        switch (type) {
-            case 'formula':
-            case 'string':
-            case 'number':
-            case 'boolean':
-            case 'null':
-                if (type === 'formula') {
-                    console.log(tab + '"' + htmlnode.data('raw_value') + '"');
-                }
-                console.log(tab + '"' + htmlnode.data('display_value') + '"');
-                break;
-            case 'array':
-            case 'object':
-                (function printcomposition() {
-                    var $$fields = htmlnode.data('$$fields');
-                    for (var i = 0; i < $$fields.length; i++) {
-                        var $field = $$fields[i];
-                        var sel = $field.data('selector');
-                        console.log(tab + sel + ":");
-                        printdom($field.data('$data_node'), depth + 1);
-                    }
-                })();
-                break;
-        }
-    }
-
-    function save() {
-        function extractdata($html_node) {
-            // console.log($html_node);
-            // console.log($html_node.data());
-
-            var type = $html_node.data('type');
-            if (['string', 'number', 'boolean', 'null', 'formula'].indexOf(type) > -1) {
-                var t = $html_node.data('raw_value');
-                // console.log("t:", t);
-                return t;
-            }
-            if (['array', 'object'].indexOf(type) > -1) {
-                var a = [];
-                var o = {};
-                var $$fields = $html_node.data('$$fields');
-                for (var i = 0; i < $$fields.length; i++) {
-                    var $field = $$fields[i];
-                    var data_node = extractdata($field.data('$data_node'));
-
-                    if (type === 'array') {
-                        a.push(data_node);
-                    } else {
-                        var key = $field.data('selector');
-                        o[key] = data_node;
-                    }
-                }
-                return type === 'array' ? a : o;
-            }
-        }
-
+    function save(data) {
         var file = {};
-        file[docroot] = extractdata($('#document')
-            .data('document'));
+        file[docroot] = data;
         file[configroot] = config.get();
 
         var savejson = JSON.stringify(file);
@@ -137,53 +76,6 @@
                 $('#message')
                     .text(resp.error);
             });
-    }
-
-    function handleToggle(eventObject) {
-        var $field = $(this)
-            .data('$field');
-        var $data_node = $field.data('$data_node');
-        var $summary = $field.data('$summary');
-        var $labelstack = $field.data('$labelstack');
-
-        // update collapser icon
-        var direction = ($data_node.data('state') == 'shown') ? 'close' : 'open';
-        var type = $field.data('type');
-
-        // arrow is first child of controller ("this")
-        $($(this)
-                .children(':first'))
-            .attr('class', collapsers[type + '-' + direction]);
-
-        if (direction === 'open') {
-            $data_node.show()
-                .data('state', 'shown');
-
-            if ($summary) {
-                $summary.hide();
-            }
-            if (type === 'element') {
-                $labelstack.removeClass('horizontal')
-                    .addClass('vertical');
-            }
-
-            $data_node.removeClass('hidden');
-        } else {
-            $data_node.addClass('hidden');
-
-            setTimeout(function() {
-                $data_node.hide()
-                    .data('state', 'hidden');
-
-                if ($summary) {
-                    $summary.show();
-                }
-                if (type === 'element') {
-                    $labelstack.removeClass('vertical')
-                        .addClass('horizontal');
-                }
-            }, 500);
-        }
     }
 
     function handleScalarEdit(eventObject) {
@@ -433,11 +325,6 @@
     }
 
     function registerHandlers() {
-        $('.controller')
-            .click(handleToggle);
-        $('.scalar')
-            .dblclick(handleScalarEdit);
-
         // there must be a better way than building all menus for all labels up front
         $('.label')
             .each(function() {
@@ -455,19 +342,6 @@
     function initVue(file_data, config) {
         console.log(file_data);
 
-        function getCollapsers() {
-            return collapsers; }
-
-        function nextMode(mode, allowSummary) {
-            if (mode === 'expanded') {
-                return allowSummary ? 'summary' : 'collapsed';
-            }
-            if (mode === 'collapsed') {
-                return 'expanded';
-            }
-            return 'collapsed';
-        }
-
         vue.component('dr-object', {
             props: ['members'],
             template: $('#object-template')
@@ -480,43 +354,42 @@
                 .html(),
             data: function() {
                 return {
-                    mode: 'expanded'
+                    expanded: true,
+                    collapsers: collapsers
                 };
-            },
-            computed: {
-                collapsers: getCollapsers
             },
             methods: {
                 click: function(event) {
-                    this.mode = nextMode(this.mode, false);
-                    console.log(this.mode);
+                    this.expanded = !this.expanded;
                 }
             }
         });
 
         vue.component('dr-array', {
-            props: ['elements'],
+            props: ['elements', 'owner'],
             template: $('#array-template')
-                .html()
+                .html(),
+            data: function() {
+                return {
+                    summaryField: this.owner ? config.forkey('rex-primaries')[this.owner] : null
+                };
+            }
         });
 
         vue.component('dr-element', {
-            props: ['element', 'index'],
+            props: ['element', 'index', 'summaryField'],
             template: $('#element-template')
                 .html(),
             data: function() {
                 return {
-                    mode: 'expanded'
+                    summary: this.summaryField ? this.element[this.summaryField] : null,
+                    expanded: true,
+                    collapsers: collapsers
                 };
             },
-            computed: {
-                collapsers: getCollapsers
-            },
-
             methods: {
                 click: function(event) {
-                    this.mode = nextMode(this.mode, true);
-                    console.log(this.mode);
+                    this.expanded = !this.expanded;
                 }
             }
         });
@@ -533,35 +406,31 @@
                     }
                     return t;
                 }
+            },
+            methods: {
+                dblclick: function(event){
+                    console.log("double-clicked:", this);
+                }
             }
         });
 
         vue.component('dr-variant', {
-            props: ['datum'],
+            props: ['datum', 'owner'],
             template: $('#variant-template')
                 .html()
         });
 
         var vApp = new vue({
-            el: '#document2',
+            el: '#document',
             data: {
                 document: file_data
             }
         })
     }
 
-    function initLegacy(file_data, config) {
-        var doc = treebuilder.build(file_data, config, collapsers, track_formula_node);
-
-        var $htmlroot = $('#document')
-            .append(doc)
-            .data('document', doc);
-
+    function initLegacy(file_data, config) {     
         registerHandlers();
         calculateFormulas();
-
-        // printdom(doc);
-        // save();
     }
 
     $(function initialize() {
@@ -588,7 +457,6 @@
                     file_data = file_data[docroot];
                 }
 
-                initLegacy(file_data, config);
                 initVue(file_data, config);
             });
     });
