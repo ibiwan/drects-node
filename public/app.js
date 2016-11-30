@@ -6,6 +6,10 @@ requirejs.config({
         "contextmenu" : "include/jquery.contextmenu",
         "vue"         : "include/vue"
     },
+    "shim": {
+        "jquery-ui"   : ["jquery"],
+        "contextmenu" : ["jquery"]
+    }
 });
 
 // Load the main app module to start the app

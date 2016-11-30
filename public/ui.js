@@ -5,16 +5,15 @@
             require('./include/jquery'),
             require('./include/vue'),
             require('./parser'),
-            require('./log')
-            .log,
+            require('./log').log,
             require('./config')
         );
     } else if (typeof define === 'function' && define.amd) {
         // "amd" (require.js) mode
         define(
             ['jquery', 'jquery-ui', 'contextmenu', 'vue', './parser', './log', './config'],
-            function(jquery, jquery_ui, context_menu, vue, parser, log, config) {
-                return init(jquery, vue, parser, log.log, config);
+            function($, jquery_ui, context_menu, vue, parser, log, config) {
+                return init($, vue, parser, log.log, config);
             });
     }
 })(function($, vue, parser, log, config) { // init
@@ -383,7 +382,7 @@
     }
 
     function initVue(file_data, config) {
-        console.log(file_data);
+        // console.log(file_data);
 
         vue.component('dr-object', {
             props: ['members'],
@@ -468,8 +467,20 @@
 
         vue.component('dr-variant', {
             props: ['datum', 'owner'],
-            template: $('#variant-template')
-                .html()
+            template: $('#variant-template').html()
+        });
+
+        vue.component('dr-label', { // https://vuejs.org/v2/guide/components.html#Custom-Events
+            props: ['label'],
+            template: $('#label-template').html(),
+            data: function(){
+                $(this).contextMenu(menuItemsForNode(), {theme:'osx'});
+
+                var $field = $label.data('$field');
+                $label.contextMenu(menuItemsForNode($field), { theme: 'osx' });
+            });
+
+            }
         });
 
         var vApp = new vue({

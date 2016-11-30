@@ -32,7 +32,7 @@
                 <div class="controller" @click="click">
                     <i :class="expanded ? collapsers['member-open'] : collapsers['member-close']"></i>
                 </div>
-                <div class="label memberlabel">{{ hash }}</div>
+                <dr-label :label="hash"></dr-label>
                 <input type="text" value="" style="display: none;">
             </div>
             <transition name="fade">
@@ -51,7 +51,7 @@
                 <div class="controller" @click="click">
                     <i :class="expanded ? collapsers['element-open'] : collapsers['element-close']"></i>
                 </div>
-                <div class="label elementlabel">{{ index }}</div>
+                <dr-label :label="index"></dr-label>
                 <input type="text" value="" style="display: none;">
             </div>
             <transition name="fade">
@@ -78,5 +78,7 @@
         <dr-object :members="datum" v-else-if="datum instanceof Object"></dr-object>
         <dr-scalar :value="datum" v-else></dr-scalar>
     </template>
-
+    <template id="label-template">
+        <div class="label">{{ label }}</div>
+    </template>
 </html>
