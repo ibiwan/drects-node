@@ -32,7 +32,7 @@
                 <div class="controller" @click="click">
                     <i :class="expanded ? collapsers['member-open'] : collapsers['member-close']"></i>
                 </div>
-                <dr-label :label="hash"></dr-label>
+                <dr-label :label="hash" @deletenode="deletenode" @editlabel="editlabel"></dr-label>
                 <input type="text" value="" style="display: none;">
             </div>
             <transition name="fade">

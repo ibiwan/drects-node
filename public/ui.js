@@ -5,7 +5,8 @@
             require('./include/jquery'),
             require('./include/vue'),
             require('./parser'),
-            require('./log').log,
+            require('./log')
+            .log,
             require('./config')
         );
     } else if (typeof define === 'function' && define.amd) {
@@ -206,6 +207,10 @@
     }
 
     function handleKeyEdit($field) {
+        console.log('key edit handler', $field);
+        return;
+
+
         function validateKey(value) {
             return value.match(/^[\w-_]*$/);
         }
@@ -285,6 +290,10 @@
     }
 
     function handleDelete($node) {
+        console.log('delete handler', $node);
+        return;
+
+
         $parent = $node.data('$composition');
         $$fields = $parent.data('$$fields');
 
@@ -313,23 +322,6 @@
             { "Edit Label": function() { handleKeyEdit($node); } },
             // items to find current node's absolute/relative path
         ];
-    }
-
-    function popUpContextMenu(eventObject) {
-        var $label = $(this);
-        var $field = $label.data('$field');
-
-        $field.contextMenu(menuItemsForNode($field), { theme: 'osx' });
-    }
-
-    function registerHandlers() {
-        // there must be a better way than building all menus for all labels up front
-        $('.label')
-            .each(function() {
-                var $label = $(this);
-                var $field = $label.data('$field');
-                $label.contextMenu(menuItemsForNode($field), { theme: 'osx' });
-            });
     }
 
     function changeMade() {
@@ -412,8 +404,19 @@
             methods: {
                 click: function(event) {
                     this.expanded = !this.expanded;
-                }
-            }
+                },
+                deletenode: function(){console.log('a');handleDelete(this);},
+                editlabel: function(){console.log('b');handleKeyEdit(this);},
+            },
+            events: {
+                // deletenode: function(){console.log('x');},
+                // editlabel: function(){console.log('y');},
+            },
+            mounted: function(){
+                // console.log('mounting member');
+                // this.$on('deletenode', this.deletenode);
+                // this.$on('editlabel', this.editlabel);
+            },
         });
 
         vue.component('dr-array', {
@@ -467,19 +470,27 @@
 
         vue.component('dr-variant', {
             props: ['datum', 'owner'],
-            template: $('#variant-template').html()
+            template: $('#variant-template')
+                .html()
         });
 
         vue.component('dr-label', { // https://vuejs.org/v2/guide/components.html#Custom-Events
             props: ['label'],
-            template: $('#label-template').html(),
-            data: function(){
-                $(this).contextMenu(menuItemsForNode(), {theme:'osx'});
-
-                var $field = $label.data('$field');
-                $label.contextMenu(menuItemsForNode($field), { theme: 'osx' });
-            });
-
+            template: $('#label-template')
+                .html(),
+            methods: {
+                deletenode: function() { console.log('c');this.$emit('deletenode');console.log('m'); },
+                editlabel: function() { console.log('d');this.$emit('editlabel');console.log('n'); },
+            },
+            mounted: function() {
+                let element = $(this.$el);
+                element
+                    .contextMenu([
+                        { "Delete Node": this.deletenode },
+                        $.contextMenu.separator,
+                        { "Edit Label": this.editlabel },
+                    ], { theme: 'osx' });
+                return {};
             }
         });
 
@@ -492,7 +503,6 @@
     }
 
     function initLegacy(file_data, config) {
-        registerHandlers();
         calculateFormulas();
     }
 
