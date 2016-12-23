@@ -23,7 +23,7 @@
     </body>
     <template id="object-template">
         <div class="object">
-            <dr-member v-for="keyVal in sortedMembers" :member="keyVal.v" :hash="keyVal.k"></dr-member>
+            <dr-member v-for="keyVal in sortedMembers" :member="keyVal.v" :hash="keyVal.k" @deletenodec="deletenodec" @editlabelc="editlabelc"></dr-member>
         </div>
     </template>
     <template id="member-template">
@@ -32,7 +32,7 @@
                 <div class="controller" @click="click">
                     <i :class="expanded ? collapsers['member-open'] : collapsers['member-close']"></i>
                 </div>
-                <dr-label :label="hash" @deletenode="deletenode" @editlabel="editlabel"></dr-label>
+                <dr-label :label="hash" @deletenodeb="deletenodeb" @editlabelb="editlabelb"></dr-label>
                 <input type="text" value="" style="display: none;">
             </div>
             <transition name="fade">

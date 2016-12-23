@@ -293,7 +293,6 @@
         console.log('delete handler', $node);
         return;
 
-
         $parent = $node.data('$composition');
         $$fields = $parent.data('$$fields');
 
@@ -376,6 +375,8 @@
     function initVue(file_data, config) {
         // console.log(file_data);
 
+        var Events = new vue({});
+
         vue.component('dr-object', {
             props: ['members'],
             template: $('#object-template')
@@ -388,7 +389,13 @@
                             return { k: key, v: members[key] };
                         });
                 }
-            }
+            },
+            methods:{
+                deletenodec: function(key){ 
+                    vue.delete(this.members, key);
+                },
+                editlabelc:  function(key){ console.log('ec', key); handleKeyEdit(this); },
+            },
         });
 
         vue.component('dr-member', {
@@ -405,17 +412,8 @@
                 click: function(event) {
                     this.expanded = !this.expanded;
                 },
-                deletenode: function(){console.log('a');handleDelete(this);},
-                editlabel: function(){console.log('b');handleKeyEdit(this);},
-            },
-            events: {
-                // deletenode: function(){console.log('x');},
-                // editlabel: function(){console.log('y');},
-            },
-            mounted: function(){
-                // console.log('mounting member');
-                // this.$on('deletenode', this.deletenode);
-                // this.$on('editlabel', this.editlabel);
+                deletenodeb: function() { this.$emit('deletenodec', this.hash); },
+                editlabelb:  function() { this.$emit('editlabelc',  this.hash); },
             },
         });
 
@@ -478,17 +476,13 @@
             props: ['label'],
             template: $('#label-template')
                 .html(),
-            methods: {
-                deletenode: function() { console.log('c');this.$emit('deletenode');console.log('m'); },
-                editlabel: function() { console.log('d');this.$emit('editlabel');console.log('n'); },
-            },
             mounted: function() {
                 let element = $(this.$el);
                 element
                     .contextMenu([
-                        { "Delete Node": this.deletenode },
+                        { "Delete Node": ()=>this.$emit('deletenodeb') },
                         $.contextMenu.separator,
-                        { "Edit Label": this.editlabel },
+                        { "Edit Label": ()=>this.$emit('editlabelb') },
                     ], { theme: 'osx' });
                 return {};
             }
