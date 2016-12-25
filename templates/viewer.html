@@ -17,51 +17,60 @@
         <a href="/listdocs">choose file</a>
         <br />
         <a href="/logout">logout</a>
+
         <div id="document">
             <dr-object :members="document"></dr-object>
         </div>
     </body>
+
     <template id="object-template">
         <div class="object">
-            <dr-member v-for="keyVal in sortedMembers" :member="keyVal.v" :hash="keyVal.k" @deletenodec="deletenodec" @editlabelc="editlabelc"></dr-member>
+            <dr-member v-for="keyVal in sortedMembers" :member="keyVal.v" :hash="keyVal.k" @deletenode="deletenode" @editlabel="editlabel"></dr-member>
         </div>
     </template>
+
     <template id="member-template">
         <div class="member">
             <div class="labelstack horizontal">
                 <div class="controller" @click="click">
                     <i :class="expanded ? collapsers['member-open'] : collapsers['member-close']"></i>
                 </div>
-                <dr-label :label="hash" @deletenodeb="deletenodeb" @editlabelb="editlabelb"></dr-label>
+                <dr-label :label="hash" @deletenode="deletenode" @editlabel="editlabel"></dr-label>
                 <input type="text" value="" style="display: none;">
             </div>
+
             <transition name="fade">
                 <dr-variant :datum="member" :owner="hash" v-if="expanded"></dr-variant>
             </transition>
         </div>
     </template>
+
     <template id="array-template">
         <div class="array">
-            <dr-element v-for="(element, index) in elements" :element="element" :index="index" :summary-field="summaryField"></dr-element>
+            <dr-element v-for="(element, index) in elements" :element="element" :index="index" :summary-field="summaryField" @deletenode="deletenode" @editlabel="editlabel"></dr-element>
         </div>
     </template>
+
     <template id="element-template">
         <div class="element">
             <div class="labelstack vertical">
                 <div class="controller" @click="click">
                     <i :class="expanded ? collapsers['element-open'] : collapsers['element-close']"></i>
                 </div>
-                <dr-label :label="index"></dr-label>
-                <input type="text" value="" style="display: none;">
+
+                <dr-label :label="index" @deletenode="deletenode" @editlabel="editlabel" v-if="!labeleditmode"></dr-label>
+                <input type="text" value="" v-if="labeleditmode">
             </div>
+
             <transition name="fade">
                 <dr-variant :datum="element" v-if="expanded"></dr-variant>
                 <div class="summary" v-else>{{ summary }}</div>
             </transition>
         </div>
     </template>
+
     <template id="scalar-template">
-        <div class="scalar horizontal" @dblclick="dblclick">
+        <div class="scalar horizontal">
             <div class="value_display" :class="type">{{ value }}</div>
             <select style="display: none;">
                 <option value="null" :selected="type==='null'">null</option>
@@ -73,11 +82,13 @@
             <input type="text" value="" style="display: none;">
         </div>
     </template>
+
     <template id="variant-template">
         <dr-array :elements="datum" :owner="owner" v-if="datum instanceof Array"></dr-array>
         <dr-object :members="datum" v-else-if="datum instanceof Object"></dr-object>
         <dr-scalar :value="datum" v-else></dr-scalar>
     </template>
+
     <template id="label-template">
         <div class="label">{{ label }}</div>
     </template>

@@ -379,8 +379,11 @@
 
         vue.component('dr-object', {
             props: ['members'],
-            template: $('#object-template')
-                .html(),
+            data: function(){
+                return {
+                };
+            },
+            template: $('#object-template').html(),
             computed: {
                 sortedMembers: function() {
                     var members = this.members;
@@ -391,65 +394,77 @@
                 }
             },
             methods:{
-                deletenodec: function(key){ 
+                deletenode: function(key){ 
                     vue.delete(this.members, key);
                 },
-                editlabelc:  function(key){ console.log('ec', key); handleKeyEdit(this); },
+                editlabel:  function(oldkey, newkey){ 
+                    console.log('ec', key); handleKeyEdit(this); 
+                },
             },
         });
 
         vue.component('dr-member', {
             props: ['member', 'hash'],
-            template: $('#member-template')
-                .html(),
+            template: $('#member-template').html(),
             data: function() {
                 return {
                     expanded: true,
-                    collapsers: collapsers
+                    collapsers: collapsers,
+                    labeleditmode: false,
                 };
             },
             methods: {
                 click: function(event) {
                     this.expanded = !this.expanded;
                 },
-                deletenodeb: function() { this.$emit('deletenodec', this.hash); },
-                editlabelb:  function() { this.$emit('editlabelc',  this.hash); },
+                deletenode: function() { this.$emit('deletenode', this.hash); },
+                editlabel:  function(key) { 
+                    console.log('eb', key); handleKeyEdit(this); 
+                    this.labeleditmode = !this.labeleditmode;
+                    // this.$emit('editlabel',  this.hash);
+                },
             },
         });
 
         vue.component('dr-array', {
             props: ['elements', 'owner'],
-            template: $('#array-template')
-                .html(),
+            template: $('#array-template').html(),
             data: function() {
                 return {
-                    summaryField: this.owner ? config.forkey('rex-primaries')[this.owner] : null
+                    summaryField: this.owner ? config.forkey('rex-primaries')[this.owner] : null,
                 };
-            }
+            },
+            methods:{
+                deletenode: function(index){ 
+                    this.elements.splice(index, 1);
+                },
+                editlabel:  function(index){ console.log('ec', index); handleKeyEdit(this); },
+            },
         });
 
         vue.component('dr-element', {
             props: ['element', 'index', 'summaryField'],
-            template: $('#element-template')
-                .html(),
+            template: $('#element-template').html(),
             data: function() {
                 return {
                     summary: this.summaryField ? this.element[this.summaryField] : null,
                     expanded: true,
-                    collapsers: collapsers
+                    collapsers: collapsers,
+                    labeleditmode: false,
                 };
             },
             methods: {
                 click: function(event) {
                     this.expanded = !this.expanded;
-                }
+                },
+                deletenode: function() { this.$emit('deletenode', this.index); },
+                editlabel:  function() { this.$emit('editlabel',  this.index); },
             }
         });
 
         vue.component('dr-scalar', {
             props: ['value'],
-            template: $('#scalar-template')
-                .html(),
+            template: $('#scalar-template').html(),
             computed: {
                 type: function() {
                     var t = typeof(this.value);
@@ -459,30 +474,23 @@
                     return t;
                 }
             },
-            methods: {
-                dblclick: function(event) {
-                    console.log("double-clicked:", this);
-                }
-            }
         });
 
         vue.component('dr-variant', {
             props: ['datum', 'owner'],
-            template: $('#variant-template')
-                .html()
+            template: $('#variant-template').html()
         });
 
         vue.component('dr-label', { // https://vuejs.org/v2/guide/components.html#Custom-Events
             props: ['label'],
-            template: $('#label-template')
-                .html(),
+            template: $('#label-template').html(),
             mounted: function() {
                 let element = $(this.$el);
                 element
                     .contextMenu([
-                        { "Delete Node": ()=>this.$emit('deletenodeb') },
+                        { "Delete Node": ()=>this.$emit('deletenode', this.label) },
                         $.contextMenu.separator,
-                        { "Edit Label": ()=>this.$emit('editlabelb') },
+                        { "Edit Label": ()=>this.$emit('editlabel', this.label) },
                     ], { theme: 'osx' });
                 return {};
             }
