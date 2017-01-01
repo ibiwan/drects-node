@@ -19,20 +19,21 @@
     }
 })(function($, vue, parser, log, config) { // init
 
-    var docroot = 'rex-document';
-    var configroot = config.configroot;
-    var docname = 'Untitled Document';
+    let docroot    = 'rex-document';
+    let configroot = config.configroot;
+    let docname    = 'Untitled Document';
 
-    var collapsers = {
-        'element-open': 'fa fa-chevron-right',
+    let collapsers = {
+        'element-open':  'fa fa-chevron-right',
         'element-close': 'fa fa-chevron-up',
-        'member-open': 'fa fa-chevron-down',
-        'member-close': 'fa fa-chevron-left'
+        'member-open':   'fa fa-chevron-down',
+        'member-close':  'fa fa-chevron-left'
     };
 
     var formula_nodes = [];
 
     function track_formula_node(node) {
+        console.log('track_formula_node');
         if (node instanceof $) {
             node = node[0];
         }
@@ -40,6 +41,7 @@
     }
 
     function untrack_formula_node(node) {
+        console.log('untrack_formula_node');
         if (node instanceof $) {
             node = node[0];
         }
@@ -50,6 +52,7 @@
     }
 
     function save(data) {
+        console.log('save');
         var file = {};
         file[docroot] = data;
         file[configroot] = config.get();
@@ -78,48 +81,33 @@
     }
 
     function handleScalarEdit(eventObject) {
+        console.log('handleScalarEdit');
         function stringToBoolean(string) {
-            switch (string.toLowerCase()) {
-                case "true":
-                case "yes":
-                case "1":
-                    return true;
-                default:
-                    return false;
-            }
+            return ["true", "yes", "1"].indexOf(string.toLowerCase()) > -1;
         }
 
         function validate(type, value) {
+            console.log('validate');
             var validators = {
-                'string': {
-                    'func': function(v) {
-                        return true;
-                    },
-                    'err': 'all strings are strings, right?  right?!?'
+                string: {
+                    func: v => true,
+                    err: 'all strings are strings, right?  right?!?',
                 },
-                'formula': {
-                    'func': function(v) {
-                        return value.indexOf('=') === 0;
-                    },
-                    'err': 'functions must start with "="'
+                formula: {
+                    func: v => value.indexOf('=') === 0,
+                    err:  'functions must start with "="',
                 },
-                'number': {
-                    'func': function(v) {
-                        return !isNaN(parseFloat(v)) && isFinite(v);
-                    },
-                    'err': 'number fields must take numeric values'
+                number: {
+                    func: v => !isNaN(parseFloat(v)) && isFinite(v),
+                    err: 'number fields must take numeric values',
                 },
-                'null': {
-                    'func': function(v) {
-                        return [null, '', 'null'].indexOf(v) > -1;
-                    },
-                    'err': 'null fields must take null values'
+                null: {
+                    func: v => [null, '', 'null'].indexOf(v) > -1,
+                    err: 'null fields must take null values',
                 },
-                'boolean': {
-                    'func': function(v) {
-                        return [true, false, 'true', 'false', 'True', 'False'].indexOf(v) > -1;
-                    },
-                    'err': 'boolean fields must take true/false values'
+                boolean: {
+                    func: v => [true, false, 'true', 'false', 'True', 'False'].indexOf(v) > -1,
+                    err: 'boolean fields must take true/false values',
                 }
             };
             if (!(type in validators)) {
@@ -127,7 +115,7 @@
                 return false;
             }
 
-            var validator = validators[type];
+            let validator = validators[type];
 
             if (validator.func(value)) return true;
             alert(validator.err);
@@ -152,6 +140,7 @@
         $type_selector.show();
 
         $value_edit.keypress(function valueeditkeypress(event) {
+            console.log('keypress');
             if (event.which == 13) { // return key
                 var new_value = $value_edit.val();
                 var new_type = $type_selector.val();
@@ -206,47 +195,9 @@
         });
     }
 
-    function handleKeyEdit($field) {
-        console.log('key edit handler', $field);
-        return;
-
-
-        function validateKey(value) {
-            return value.match(/^[\w-_]*$/);
-        }
-        var $label = $field.data('$label');
-
-        // console.log($field.data(), $label);
-
-        var $label_edit = $field.data('$label_edit');
-
-        var old_key = $field.data('selector');
-
-        $label_edit.show()
-            .val(old_key);
-        $label.hide();
-
-        $label_edit.keypress(function labeleditkeypress(event) {
-            if (event.which == 13) { // return key
-                var new_key = $label_edit.val();
-                var changed = new_key != old_key;
-                if (!changed || validateKey(new_key)) {
-                    // console.log(new_key);
-                    $label_edit.hide();
-                    $label.show();
-
-                    if (changed) {
-                        $field.data('selector', new_key);
-                        $label.html(new_key);
-
-                        changeMade();
-                    }
-                }
-            }
-        });
-    }
-
     function calculateFormulas() {
+        console.log('calculateFormulas');
+
         var i, node;
         var num_changes = 0;
         var prev_num_changes;
@@ -289,47 +240,14 @@
         } while (num_changes !== prev_num_changes);
     }
 
-    function handleDelete($node) {
-        console.log('delete handler', $node);
-        return;
-
-        $parent = $node.data('$composition');
-        $$fields = $parent.data('$$fields');
-
-        for (var i = 0; i < $$fields.length; i++) {
-            if ($$fields[i] === $node) {
-                $$fields.splice(i, 1); // in-place
-                $parent.data('$$fields', $$fields);
-                $data_node = $node.data('$data_node');
-
-                if ($data_node.data('type') === 'formula') {
-                    untrack_formula_node($data_node);
-                }
-                $node.remove();
-
-                changeMade();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function menuItemsForNode($node) {
-        return [
-            { "Delete Node": function() { handleDelete($node); } },
-            $.contextMenu.separator,
-            { "Edit Label": function() { handleKeyEdit($node); } },
-            // items to find current node's absolute/relative path
-        ];
-    }
-
     function changeMade() {
+        console.log('changeMade');
         calculateFormulas();
         save();
     }
 
     function sortKeys(keys) {
-        var config_keys = config.forkey('rex-ordering');
+        let config_keys = config.forkey('rex-ordering');
 
         var key;
         var sorted_keys = [];
@@ -373,101 +291,75 @@
     }
 
     function initVue(file_data, config) {
-        // console.log(file_data);
-
-        var Events = new vue({});
 
         vue.component('dr-object', {
-            props: ['members'],
-            data: function(){
-                return {
-                };
-            },
+            props:    ['members'],
             template: $('#object-template').html(),
             computed: {
-                sortedMembers: function() {
-                    var members = this.members;
-                    return getKeys(members)
-                        .map(function(key) {
-                            return { k: key, v: members[key] };
-                        });
+                sortedMembers() {
+                    let m = this.members;
+                    return getKeys(m).map( key => ({ k: key, v: m[key] }));
                 }
             },
-            methods:{
-                deletenode: function(key){ 
-                    vue.delete(this.members, key);
-                },
-                editlabel:  function(oldkey, newkey){ 
-                    console.log('ec', key); handleKeyEdit(this); 
+            methods:  {
+                deletenode(key) { vue.delete(this.members, key); },
+                labelmodify(oldkey, newkey) {
+                    vue.set(this.members, newkey, this.members[oldkey]);
+                    vue.delete(this.members, oldkey);
                 },
             },
         });
 
         vue.component('dr-member', {
-            props: ['member', 'hash'],
+            props:    ['member', 'hash'],
             template: $('#member-template').html(),
-            data: function() {
-                return {
-                    expanded: true,
-                    collapsers: collapsers,
-                    labeleditmode: false,
-                };
+            data() { return {
+                expanded: true,
+            }; },
+            computed: {
+                widgeticon() { return collapsers[this.expanded ? 'member-open' : 'member-close']; }
             },
-            methods: {
-                click: function(event) {
-                    this.expanded = !this.expanded;
-                },
-                deletenode: function() { this.$emit('deletenode', this.hash); },
-                editlabel:  function(key) { 
-                    console.log('eb', key); handleKeyEdit(this); 
-                    this.labeleditmode = !this.labeleditmode;
-                    // this.$emit('editlabel',  this.hash);
-                },
+            methods:  {
+                click(event)          { this.expanded = !this.expanded; },
+                deletenode()          { this.$emit('deletenode', this.hash); },
+                labelmodify(newlabel) { this.$emit('labelmodify', this.hash, newlabel); },
             },
         });
 
         vue.component('dr-array', {
-            props: ['elements', 'owner'],
+            props:    ['elements', 'owner'],
             template: $('#array-template').html(),
-            data: function() {
-                return {
-                    summaryField: this.owner ? config.forkey('rex-primaries')[this.owner] : null,
-                };
-            },
-            methods:{
-                deletenode: function(index){ 
-                    this.elements.splice(index, 1);
-                },
-                editlabel:  function(index){ console.log('ec', index); handleKeyEdit(this); },
+            data() { return {
+                summaryField: this.owner ? config.forkey('rex-primaries')[this.owner] : null,
+            }; },
+            methods:  {
+                deletenode(index) { this.elements.splice(index, 1); },
             },
         });
 
         vue.component('dr-element', {
-            props: ['element', 'index', 'summaryField'],
+            props:    ['element', 'index', 'summaryField'],
             template: $('#element-template').html(),
-            data: function() {
-                return {
-                    summary: this.summaryField ? this.element[this.summaryField] : null,
-                    expanded: true,
-                    collapsers: collapsers,
-                    labeleditmode: false,
-                };
+            data() { return {
+                summary:  this.summaryField ? this.element[this.summaryField] : null,
+                expanded: true,
+            }; },
+            computed: {
+                widgeticon() { return collapsers[this.expanded ? 'element-open' : 'element-close']; }
             },
-            methods: {
-                click: function(event) {
-                    this.expanded = !this.expanded;
-                },
-                deletenode: function() { this.$emit('deletenode', this.index); },
-                editlabel:  function() { this.$emit('editlabel',  this.index); },
+            methods:  {
+                click()      { this.expanded = !this.expanded; },
+                deletenode() { this.$emit('deletenode', this.index); },
+                editlabel()  { this.$emit('editlabel',  this.index); },
             }
         });
 
         vue.component('dr-scalar', {
-            props: ['value'],
+            props:    ['value'],
             template: $('#scalar-template').html(),
             computed: {
-                type: function() {
-                    var t = typeof(this.value);
+                type() {
+                    let t = typeof(this.value);
                     if (t === 'string' && this.value[0] === '=') {
                         t = "formula";
                     }
@@ -477,35 +369,49 @@
         });
 
         vue.component('dr-variant', {
-            props: ['datum', 'owner'],
+            props:    ['datum', 'owner'],
             template: $('#variant-template').html()
         });
 
-        vue.component('dr-label', { // https://vuejs.org/v2/guide/components.html#Custom-Events
-            props: ['label'],
+        vue.component('dr-label', {
+            props:    ['label', 'editable'],
             template: $('#label-template').html(),
-            mounted: function() {
-                let element = $(this.$el);
-                element
-                    .contextMenu([
-                        { "Delete Node": ()=>this.$emit('deletenode', this.label) },
-                        $.contextMenu.separator,
-                        { "Edit Label": ()=>this.$emit('editlabel', this.label) },
-                    ], { theme: 'osx' });
-                return {};
+            data(){ return {
+                mylabel:       this.label,
+                labeleditmode: false,
+            }; },
+            mounted() { this.configmenu(); },
+            updated() { this.configmenu(); },
+            methods:  {
+                configmenu() {
+                    var items = [
+                        { "Delete Node": () => this.$emit('deletenode', this.label) },
+                    ];
+                    if(this.editable){
+                        items.push( $.contextMenu.separator );
+                        items.push( { "Edit Label":  () => this.labeleditmode = true } );
+                    }
+                    $(this.$el).contextMenu(items, { theme: 'osx' });
+                },
+                labeleditdone(event) {
+                    let changed = this.label != this.mylabel;
+                    let valid   = !!this.mylabel.match(/^[\w-_]*$/);
+                    if (!changed || valid) {
+                        this.labeleditmode = false;
+                    }
+                    if(changed && valid){
+                        this.$emit('labelmodify', this.mylabel);
+                    }
+                }
             }
         });
 
         var vApp = new vue({
-            el: '#document',
+            el:   '#document',
             data: {
                 document: file_data
             }
         })
-    }
-
-    function initLegacy(file_data, config) {
-        calculateFormulas();
     }
 
     $(function initialize() {
@@ -522,10 +428,9 @@
                     return;
                 }
 
-                docname = xhr_data.filename;
-                document.title = "Dynamic Spreadsheet - " + docname;
+                document.title = "Dynamic Spreadsheet - " + xhr_data.filename;
 
-                var file_data = JSON.parse(xhr_data.file);
+                let file_data = JSON.parse(xhr_data.file);
 
                 config.load(file_data);
                 if (file_data[docroot]) {
@@ -533,6 +438,8 @@
                 }
 
                 initVue(file_data, config);
+
+                // calculateFormulas();
             });
     });
 });
