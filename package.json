@@ -1,0 +1,30 @@
+{
+  "name": "drects-node",
+  "version": "1.0.0",
+  "description": "not-excel",
+  "main": "rects_s.js",
+  "scripts": {
+    "start": "./rects_s.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://ibiwan@github.com/ibiwan/drects-node.git"
+  },
+  "author": "Jeremy \"ibiwan\" Kent",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ibiwan/drects-node/issues"
+  },
+  "homepage": "https://github.com/ibiwan/drects-node#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "express-session": "^1.17.0",
+    "handlebars": "^4.7.2",
+    "morgan": "^1.9.1",
+    "password-hash-and-salt": "^0.1.4",
+    "promise": "^8.0.3",
+    "proxmis": "^1.0.0",
+    "sqlite3": "^4.1.1"
+  }
+}

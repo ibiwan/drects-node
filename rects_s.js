@@ -64,7 +64,15 @@ function setupSessionSecret()
     var secret_file = 'session_secret.txt';
     fs.readFile(secret_file, function(err, data){
         if(err) {   // save generated secret
-            fs.writeFile(secret_file, secret);
+            fs.writeFile(
+                secret_file, 
+                secret,
+                 (...params)=>{
+                     console.log('writeFile callback params', 
+                     ...params
+                )
+            }
+            );
         } else {    // load saved secret
             secret = data.toString();
         }
